@@ -4,11 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>DCOIN Mini App VIP</title>
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body {
@@ -39,9 +36,9 @@
       <img id="user-avatar" src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff" class="w-11 h-11 rounded-full border-2 border-indigo-500 shadow-md">
       <div>
         <h4 id="user-name" class="font-bold text-sm text-slate-100 flex items-center gap-1.5">
-          Đang tải... <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>
+          Khách hàng <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>
         </h4>
-        <p class="text-xs text-slate-400">ID: <span id="user-id" class="font-mono text-indigo-300">000000</span></p>
+        <p class="text-xs text-slate-400">ID: <span id="user-id" class="font-mono text-indigo-300">-----</span></p>
       </div>
     </div>
     <div class="bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-yellow-500/40 px-3 py-1.5 rounded-2xl flex items-center gap-2 glow-gold">
@@ -123,45 +120,49 @@
   </div>
 
   <script>
-    // 🌐 KHỞI TẠO TELEGRAM SDK
-    const tg = window.Telegram?.WebApp;
-    const BACKEND_URL = "https://dcoin-bot.onrender.com"; // Tự động kết nối Backend Render
+    const BACKEND_URL = "https://dcoin-bot.onrender.com";
 
-    if (tg) {
-      tg.ready();
-      tg.expand();
+    function initApp() {
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        try {
+          tg.ready();
+          tg.expand();
+        } catch(e) {}
+
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+          const fullName = (user.first_name || '') + (user.last_name ? ' ' + user.last_name : '');
+          document.getElementById('user-name').innerHTML = (fullName || 'Người dùng') + ' <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>';
+          document.getElementById('user-id').innerText = user.id || '-----';
+          if (user.photo_url) {
+            document.getElementById('user-avatar').src = user.photo_url;
+          }
+        }
+      }
+      loadUserData();
     }
 
-    // 🚀 LẤY DỮ LIỆU USER REALTIME TỪ SERVER BACKEND (ANTI-CHEAT)
     async function loadUserData() {
+      const tg = window.Telegram?.WebApp;
       if (!tg?.initData) return;
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/user-info`, {
           method: "POST",
-          headers: {
-            "X-TG-Data": tg.initData
-          }
+          headers: { "X-TG-Data": tg.initData }
         });
 
-        if (!res.ok) throw new Error("Chặn gian lận HMAC");
-
-        const data = await res.json();
-        document.getElementById('user-name').innerText = data.first_name;
-        document.getElementById('user-id').innerText = data.user_id;
-        document.getElementById('user-balance').innerText = data.balance.toLocaleString();
-        document.getElementById('stat-links').innerText = data.total_links;
-
-        if (tg.initDataUnsafe?.user?.photo_url) {
-          document.getElementById('user-avatar').src = tg.initDataUnsafe.user.photo_url;
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('user-balance').innerText = Number(data.balance || 0).toLocaleString();
+          document.getElementById('stat-links').innerText = data.total_links || 0;
         }
-      } catch (err) {
-        alert("🚨 Cảnh báo Anti-Cheat: Lỗi xác thực Telegram!");
-      }
+      } catch (err) {}
     }
 
-    // 💸 GỬI YÊU CẦU RÚT TIỀN LÊN BACKEND
     async function submitWithdraw() {
+      const tg = window.Telegram?.WebApp;
       const amount = parseFloat(document.getElementById('withdraw-amount').value);
       const wallet = document.getElementById('withdraw-wallet').value.trim();
 
@@ -173,7 +174,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-TG-Data": tg.initData
+            "X-TG-Data": tg ? tg.initData : ""
           },
           body: JSON.stringify({ amount: amount, wallet_info: wallet })
         });
@@ -183,14 +184,13 @@
         if (data.success) {
           document.getElementById('withdraw-amount').value = '';
           document.getElementById('withdraw-wallet').value = '';
-          loadUserData(); // Tải lại số dư mới
+          loadUserData();
         }
       } catch (e) {
-        alert("Có lỗi xảy ra khi kết nối máy chủ!");
+        alert("Lỗi kết nối máy chủ! Vui lòng thử lại.");
       }
     }
 
-    // TAB NAVIGATION
     function switchTab(tab) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(`tab-${tab}`).classList.add('active');
@@ -200,12 +200,21 @@
     }
 
     function startTask() {
-      // Dẫn link rút gọn của bạn vào đây
-      tg.openLink('https://your-shortlink-domain.com');
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        tg.openLink('https://your-shortlink-domain.com');
+      } else {
+        window.open('https://your-shortlink-domain.com', '_blank');
+      }
     }
 
-    // Tải dữ liệu chuẩn khi vào App
-    loadUserData();
+    // Chạy ngay khi tải xong
+    document.addEventListener("DOMContentLoaded", initApp);
+    if (document.readyState === "interactive" || document.readyState === "complete") {
+      initApp();
+    }
   </script>
 </body>
-</html> 
+</html>
+
+  

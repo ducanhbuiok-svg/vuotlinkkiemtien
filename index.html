@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -16,7 +16,7 @@
 </head>
 <body class="pb-20 select-none">
 
-    <!-- HEADER / THÔNG TIN USER -->
+    <!-- HEADER -->
     <div class="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center sticky top-0 z-50">
         <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center font-bold text-white text-lg shadow-lg">
@@ -64,7 +64,7 @@
                     </div>
                     <div class="flex space-x-2">
                         <button onclick="getTaskLink('task_1')" class="w-1/2 bg-sky-600 hover:bg-sky-500 font-bold py-2 rounded-xl text-xs text-white">1. Lấy Link</button>
-                        <button onclick="completeTask('task_1')" class="w-1/2 bg-emerald-600 hover:bg-emerald-500 font-bold py-2 rounded-xl text-xs text-white">2. Nhận Thưởng</button>
+                        <button onclick="manualClaimTask('task_1')" class="w-1/2 bg-emerald-600 hover:bg-emerald-500 font-bold py-2 rounded-xl text-xs text-white">2. Nhận Thưởng</button>
                     </div>
                 </div>
 
@@ -78,7 +78,7 @@
                     </div>
                     <div class="flex space-x-2">
                         <button onclick="getTaskLink('task_2')" class="w-1/2 bg-sky-600 hover:bg-sky-500 font-bold py-2 rounded-xl text-xs text-white">1. Lấy Link</button>
-                        <button onclick="completeTask('task_2')" class="w-1/2 bg-emerald-600 hover:bg-emerald-500 font-bold py-2 rounded-xl text-xs text-white">2. Nhận Thưởng</button>
+                        <button onclick="manualClaimTask('task_2')" class="w-1/2 bg-emerald-600 hover:bg-emerald-500 font-bold py-2 rounded-xl text-xs text-white">2. Nhận Thưởng</button>
                     </div>
                 </div>
             </div>
@@ -135,7 +135,6 @@
                 <button onclick="submitWithdraw()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 font-bold py-2.5 rounded-xl text-xs text-white shadow-lg">GỬI YÊU CẦU RÚT TIỀN</button>
             </div>
 
-            <!-- LỊCH SỬ RÚT TIỀN VÀ TRẠNG THÁI REALTIME -->
             <div class="glass-card p-4 rounded-2xl space-y-3">
                 <h3 class="font-bold text-sm text-slate-200">Lịch sử rút tiền của bạn</h3>
                 <div id="user-withdraw-history" class="space-y-2 text-xs">
@@ -157,7 +156,7 @@
             </div>
         </div>
 
-        <!-- TAB 4: TRANG ADMIN (ẨN MẶC ĐỊNH, CHỈ ADMIN MỚI THẤY) -->
+        <!-- TAB 4: ADMIN PANEL -->
         <div id="tab-admin" class="tab-content space-y-4 hidden">
             <div class="glass-card p-4 rounded-2xl space-y-4">
                 <h2 class="font-bold text-base text-rose-400 flex items-center space-x-2">
@@ -193,8 +192,8 @@
             </div>
         </div>
 
-      </div>
-              
+    </div>
+
     <!-- BOTTOM NAVIGATION -->
     <div class="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 px-2 py-2 flex justify-around items-center z-50">
         <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center text-sky-400 active-tab py-1">
@@ -215,9 +214,13 @@
         </button>
     </div>
 
-    <!-- SCRIPT CHÍNH -->
+    <!-- JAVASCRIPT PHÍA FRONTEND -->
     <script>
-        const API_BASE = "https://bot-dcoin.onrender.com"; // Thay URL Render của bạn vào đây
+        // =========================================================
+        // THAY 2 THÔNG SỐ CƠ BẢN NÀY
+        // =========================================================
+        const API_BASE = "https://dcoin-bot.onrender.com";       // Link Backend Render của bạn
+        const BOT_USERNAME = "vuotlink_kiemtien_bot";                     // Username Telegram Bot (Bỏ dấu @)
 
         const tg = window.Telegram?.WebApp;
         if(tg) tg.expand();
@@ -229,7 +232,6 @@
         let username = tgUser.username || "";
 
         let selectedMethod = "MOMO";
-        let activeTaskTokens = {};
         let isAdminUser = false;
 
         async function initApp() {
@@ -251,9 +253,31 @@
                     isAdminUser = true;
                     document.getElementById('nav-admin').classList.remove('hidden');
                 }
-            } catch(e) {
-                console.error(e);
-            }
+
+                // =========================================================
+                // LOGIC TỰ ĐỘNG BẬT POPUP KHI VƯỢT LINK XONG CẬP BẾN
+                // =========================================================
+                const startParam = tg?.initDataUnsafe?.start_param || "";
+                if (startParam.startsWith("complete_")) {
+                    const taskId = startParam.replace("complete_", "");
+                    const savedToken = localStorage.getItem(`token_${taskId}`);
+
+                    if (savedToken) {
+                        if (tg && tg.showConfirm) {
+                            tg.showConfirm(`🎉 Chúc mừng! Bạn vừa hoàn thành Nhiệm vụ #${taskId}.\n\nNhấn OK để nhận ngay +300 DCOIN!`, async (confirmed) => {
+                                if (confirmed) {
+                                    await autoClaimReward(taskId, savedToken);
+                                }
+                            });
+                        } else {
+                            if (confirm(`🎉 Chúc mừng! Bạn vừa hoàn thành Nhiệm vụ #${taskId}.\nNhấn OK để nhận ngay +300 DCOIN!`)) {
+                                await autoClaimReward(taskId, savedToken);
+                            }
+                        }
+                    }
+                }
+
+            } catch(e) { console.error(e); }
         }
 
         function switchTab(tab) {
@@ -285,25 +309,28 @@
 
         async function getTaskLink(taskId) {
             try {
+                // Đích đến sau khi vượt link là Telegram Deep Link mở lại Mini App
+                const botDeepLink = `https://t.me/${BOT_USERNAME}/app?startapp=complete_${taskId}`;
+
                 const res = await fetch(`${API_BASE}/api/get-task-link`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ user_id: userId, task_id: taskId, target_url: "https://google.com" })
+                    body: JSON.stringify({ user_id: userId, task_id: taskId, target_url: botDeepLink })
                 });
                 const data = await res.json();
                 if(data.success) {
-                    activeTaskTokens[taskId] = data.task_token;
+                    // Lưu Token vào Bộ nhớ tạm trình duyệt
+                    localStorage.setItem(`token_${taskId}`, data.task_token);
+
                     if(tg) tg.openLink(data.short_link);
                     else window.open(data.short_link, '_blank');
-                    alert("Đã mở link! Hoàn thành và chờ 15s trước khi bấm 'Nhận Thưởng'.");
+
+                    alert("Đã mở link! Sau khi vượt link xong, hệ thống sẽ tự động đưa bạn quay lại đây để nhận DCOIN.");
                 } else alert(data.msg);
             } catch(e) { alert("Lỗi kết nối!"); }
         }
 
-        async function completeTask(taskId) {
-            const token = activeTaskTokens[taskId];
-            if(!token) return alert("Vui lòng nhấn '1. Lấy Link' trước!");
-
+        async function autoClaimReward(taskId, token) {
             try {
                 const res = await fetch(`${API_BASE}/api/complete-task`, {
                     method: 'POST',
@@ -314,91 +341,11 @@
                 alert(data.msg);
                 if(data.success) {
                     document.getElementById('user-balance').innerText = data.new_balance.toLocaleString();
-                    delete activeTaskTokens[taskId];
+                    localStorage.removeItem(`token_${taskId}`);
                 }
-            } catch(e) { alert("Lỗi kết nối!"); }
-        }
-
-        async function doCheckin() {
-            try {
-                const res = await fetch(`${API_BASE}/api/checkin`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ user_id: userId })
-                });
-                const data = await res.json();
-                alert(data.msg);
-                if(data.success) document.getElementById('user-balance').innerText = data.new_balance.toLocaleString();
-            } catch(e) { alert("Lỗi kết nối!"); }
-        }
-
-        async function submitWithdraw() {
-            const acc = document.getElementById('withdraw-account').value.trim();
-            const name = document.getElementById('withdraw-name').value.trim();
-            const bank = document.getElementById('withdraw-bank').value.trim();
-            const amount = parseInt(document.getElementById('withdraw-amount').value) || 0;
-
-            if(!acc || !name) return alert("Vui lòng điền đầy đủ thông tin!");
-
-            try {
-                const res = await fetch(`${API_BASE}/api/withdraw`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ user_id: userId, amount: amount, method: selectedMethod, account_number: acc, account_name: name, bank_name: bank })
-                });
-                const data = await res.json();
-                alert(data.msg);
-                if(data.success) {
-                    initApp();
-                    loadUserWithdrawals();
-                }
-            } catch(e) { alert("Lỗi gửi yêu cầu!"); }
-        }
-
-        // TẢI LỊCH SỬ RÚT TIỀN PHÍA USER (TRẠNG THÁI & LÝ DO)
-        async function loadUserWithdrawals() {
-            const historyEl = document.getElementById('user-withdraw-history');
-            try {
-                const res = await fetch(`${API_BASE}/api/user/withdrawals`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ user_id: userId })
-                });
-                const data = await res.json();
-
-                if(!data.success || !data.data.length) {
-                    historyEl.innerHTML = `<p class="text-slate-500 text-center py-2">Bạn chưa có đơn rút tiền nào.</p>`;
-                    return;
-                }
-
-                let html = '';
-                data.data.forEach(item => {
-                    let badge = '';
-                    if(item.status === 'pending') badge = `<span class="bg-amber-500/20 text-amber-400 text-[10px] px-2 py-0.5 rounded font-bold">⏳ Đang chờ duyệt</span>`;
-                    else if(item.status === 'approved') badge = `<span class="bg-blue-500/20 text-blue-400 text-[10px] px-2 py-0.5 rounded font-bold">🔵 Đã duyệt / Đang chuyển tiền</span>`;
-                    else if(item.status === 'completed') badge = `<span class="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-bold">🟢 Rút tiền thành công</span>`;
-                    else if(item.status === 'rejected_refund') badge = `<span class="bg-purple-500/20 text-purple-400 text-[10px] px-2 py-0.5 rounded font-bold">🟣 Đã hủy (Đã hoàn tiền)</span>`;
-                    else if(item.status === 'rejected_penalty') badge = `<span class="bg-rose-500/20 text-rose-400 text-[10px] px-2 py-0.5 rounded font-bold">🔴 Đã hủy (Vi phạm quy định)</span>`;
-
-                    let reasonText = item.reason ? `<p class="text-[10px] text-rose-300 mt-1">Lý do: ${item.reason}</p>` : '';
-
-                    html += `
-                        <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 space-y-1">
-                            <div class="flex justify-between items-center">
-                                <span class="font-bold text-amber-400">${item.amount.toLocaleString()} DCOIN</span>
-                                ${badge}
-                            </div>
-                            <p class="text-[11px] text-slate-400">${item.method} - ${item.account_number} (${item.account_name})</p>
-                            ${reasonText}
-                            <p class="text-[9px] text-slate-500">${item.date}</p>
-                        </div>
-                    `;
-                });
-                historyEl.innerHTML = html;
             } catch(e) { historyEl.innerHTML = `<p class="text-rose-400 text-center">Lỗi tải dữ liệu!</p>`; }
         }
 
-        // TẢI BẢNG XẾP HẠNG
         async function loadLeaderboard() {
             const listEl = document.getElementById('leaderboard-list');
             try {
@@ -430,7 +377,6 @@
             } catch(e) { listEl.innerHTML = `<p class="text-rose-400 text-center">Lỗi tải xếp hạng!</p>`; }
         }
 
-        // ADMIN: BƠM DCOIN
         async function adminInjectDCoin() {
             const targetUid = document.getElementById('admin-target-uid').value.trim();
             const amount = parseInt(document.getElementById('admin-inject-amount').value) || 0;
@@ -454,7 +400,6 @@
             } catch(e) { alert("Lỗi thao tác!"); }
         }
 
-        // ADMIN: TẢI DANH SÁCH ĐƠN RÚT & NÚT BẤM DUYỆT
         async function loadAdminWithdrawals() {
             const listEl = document.getElementById('admin-withdrawals-list');
             try {
@@ -488,7 +433,6 @@
                             <p class="text-slate-400">ID: <span class="text-slate-200 font-mono">${item.uid}</span> | Tiền: <span class="text-amber-400 font-bold">${item.amount.toLocaleString()} DCOIN</span></p>
                             <p class="text-slate-400">${item.method} (${item.bank_name || 'N/A'}): <span class="text-sky-300 font-mono font-bold">${item.account_number}</span> - ${item.account_name}</p>
 
-                            <!-- CÁC NÚT XỬ LÝ CHO ADMIN -->
                             <div class="grid grid-cols-2 gap-1.5 pt-2 border-t border-slate-800">
                                 <button onclick="handleAdminAction('${item.req_id}', 'approve')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-1 rounded text-[10px]">1. Duyệt Đơn</button>
                                 <button onclick="handleAdminAction('${item.req_id}', 'complete')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1 rounded text-[10px]">2. Hoàn Thành</button>
@@ -507,7 +451,7 @@
             let reason = '';
             if(action === 'reject_refund' || action === 'reject_penalty') {
                 reason = prompt("Nhập lý do từ chối / hủy đơn (Gửi cho User):", action === 'reject_refund' ? "Sai thông tin tài khoản" : "Vi phạm quy định hệ thống");
-                if(reason === null) return; // Bấm cancel
+                if(reason === null) return;
             }
 
             try {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>DCOIN Mini App VIP</title>
+  <title>DCOIN Mini App</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -13,27 +13,37 @@
       color: #f8fafc;
       font-family: system-ui, -apple-system, sans-serif;
       user-select: none;
-      -webkit-user-select: none;
     }
     .glass-card {
-      background: rgba(30, 41, 59, 0.6);
+      background: rgba(30, 41, 59, 0.65);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    .glow-gold {
-      box-shadow: 0 0 20px rgba(234, 179, 8, 0.25);
-    }
+    .glow-gold { box-shadow: 0 0 20px rgba(234, 179, 8, 0.25); }
+    .glow-indigo { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+    
+    .floating-btn {
+      position: fixed;
+      bottom: 80px;
+      right: 16px;
+      z-index: 99;
+      animation: pulse-glow 2s infinite;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.6); }
+      50% { transform: scale(1.08); box-shadow: 0 0 25px rgba(59, 130, 246, 0.9); }
+    }
   </style>
 </head>
 <body class="min-h-screen pb-24">
 
-  <!-- TOP HEADER USER PROFILE -->
+  <!-- TOP HEADER -->
   <div class="sticky top-0 z-50 glass-card border-b border-slate-700/50 p-4 flex justify-between items-center shadow-lg">
     <div class="flex items-center gap-3">
-      <img id="user-avatar" src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff" class="w-11 h-11 rounded-full border-2 border-indigo-500 shadow-md">
+      <img id="user-avatar" src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff" class="w-11 h-11 rounded-full border-2 border-amber-400 shadow-md">
       <div>
         <h4 id="user-name" class="font-bold text-sm text-slate-100 flex items-center gap-1.5">
           Khách hàng <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>
@@ -48,95 +58,224 @@
     </div>
   </div>
 
+  <!-- NÚT LIÊN HỆ ADMIN NỔI -->
+  <a href="https://t.me/daxprovn" target="_blank" class="floating-btn bg-gradient-to-r from-blue-600 to-indigo-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-2xl border border-blue-400/50">
+    <i class="fa-solid fa-headset"></i>
+  </a>
+
   <!-- MAIN CONTAINER -->
   <div class="p-4 max-w-md mx-auto space-y-4">
 
-    <!-- TAB 1: TRANG CHỦ & NHIỆM VỤ -->
+    <!-- TAB 1: TRANG CHỦ (TỔNG QUAN HỆ THỐNG) -->
     <div id="tab-home" class="tab-content active space-y-4">
       
-      <!-- CARD THỐNG KÊ -->
-      <div class="grid grid-cols-2 gap-3">
-        <div class="glass-card p-4 rounded-2xl">
-          <p class="text-xs text-slate-400 font-medium">Link đã vượt</p>
-          <h3 id="stat-links" class="text-xl font-bold text-emerald-400 mt-1">0</h3>
-        </div>
-        <div class="glass-card p-4 rounded-2xl">
-          <p class="text-xs text-slate-400 font-medium">Trạng thái Anti-Cheat</p>
-          <h3 class="text-xs font-bold text-indigo-400 mt-2 flex items-center gap-1">
-            <i class="fa-solid fa-shield-halved text-emerald-400"></i> HMAC Active
+      <!-- Banner chào mừng & lối tắt cày xu -->
+      <div class="glass-card p-5 rounded-2xl space-y-3 bg-gradient-to-r from-indigo-900/40 to-slate-900/60 border-indigo-500/30">
+        <div class="flex justify-between items-center">
+          <h3 class="font-black text-base text-yellow-400 flex items-center gap-2">
+            <i class="fa-solid fa-rocket"></i> Trung Tâm Kiếm Xu
           </h3>
+          <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30 font-bold">Online</span>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">Hãy chuyển qua mục <strong class="text-amber-400">Nhiệm Vụ</strong> ở thanh công cụ dưới để bắt đầu vượt link & nhận DCOIN miễn phí nhé!</p>
+        <button onclick="switchTab('tasks')" class="w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg active:scale-95 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-list-check text-sm"></i> TỚI TRANG LÀM NHIỆM VỤ NGAY
+        </button>
+      </div>
+
+      <!-- Thanh tiến trình cày xu -->
+      <div class="glass-card p-4 rounded-2xl space-y-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="text-slate-300 font-medium">Tiến trình đạt mốc 10k Rút tiền</span>
+          <span id="progress-text" class="text-amber-400 font-bold">0%</span>
+        </div>
+        <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden p-0.5 border border-slate-700">
+          <div id="progress-bar" class="bg-gradient-to-r from-amber-500 to-yellow-400 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
         </div>
       </div>
 
-      <!-- NHIỆM VỤ VƯỢT LINK -->
-      <div class="glass-card p-5 rounded-2xl space-y-3">
-        <div class="flex justify-between items-center">
-          <h3 class="font-bold text-sm text-yellow-400 flex items-center gap-2">
-            <i class="fa-solid fa-bolt"></i> Nhiệm vụ Vượt Link VIP
-          </h3>
-          <span class="text-[10px] bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">+1,000 DCOIN</span>
+      <!-- Thống kê -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="glass-card p-4 rounded-2xl">
+          <p class="text-xs text-slate-400 font-medium">Link đã vượt</p>
+          <h3 id="stat-links" class="text-2xl font-black text-emerald-400 mt-1">0</h3>
         </div>
-        <p class="text-xs text-slate-300 leading-relaxed">Vượt link rút gọn để nhận ngay thưởng DCOIN trực tiếp vào ví hệ thống.</p>
-        <button onclick="startTask()" class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 font-extrabold py-3 rounded-xl text-sm shadow-lg active:scale-95 transition">
-          🚀 BẮT ĐẦU VƯỢT LINK
-        </button>
+        <div class="glass-card p-4 rounded-2xl">
+          <p class="text-xs text-slate-400 font-medium">Bảo mật Anti-Cheat</p>
+          <h3 class="text-xs font-bold text-indigo-400 mt-2 flex items-center gap-1.5">
+            <i class="fa-solid fa-shield-halved text-emerald-400 text-sm"></i> HMAC Active
+          </h3>
+        </div>
       </div>
 
     </div>
 
-    <!-- TAB 2: RÚT TIỀN (WITHDRAW) -->
+    <!-- TAB 2: LÀM NHIỆM VỤ (TÁCH BỆNH DÀNH RIÊNG) -->
+    <div id="tab-tasks" class="tab-content space-y-4">
+      <div class="text-center space-y-1">
+        <h3 class="font-black text-lg text-yellow-400"><i class="fa-solid fa-list-check"></i> DANH SÁCH NHIỆM VỤ</h3>
+        <p class="text-xs text-slate-400">Hoàn thành nhiệm vụ để tích lũy DCOIN vào ví</p>
+      </div>
+
+      <!-- 1. Điểm danh hàng ngày -->
+      <div class="glass-card p-4 rounded-2xl flex items-center justify-between border-l-4 border-l-amber-500">
+        <div class="space-y-0.5">
+          <h4 class="font-bold text-sm text-yellow-400 flex items-center gap-2">
+            <i class="fa-solid fa-calendar-check"></i> Điểm Danh Hàng Ngày
+          </h4>
+          <p class="text-[11px] text-slate-300">+500 DCOIN miễn phí mỗi ngày</p>
+        </div>
+        <button id="btn-daily" onclick="claimDaily()" class="bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-extrabold px-3.5 py-2 rounded-xl text-xs shadow active:scale-95 transition">
+          NHẬN
+        </button>
+        </div>
+      <!-- 2. Nhiệm vụ vượt link VIP 1 -->
+      <div class="glass-card p-4 rounded-2xl space-y-3">
+        <div class="flex justify-between items-center">
+          <h4 class="font-bold text-sm text-slate-100 flex items-center gap-2">
+            <i class="fa-solid fa-bolt text-amber-400"></i> Vượt LinkVIP Sever 1
+          </h4>
+          <span class="text-[10px] bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30 font-bold">+1,000 DCOIN</span>
+        </div>
+        <p class="text-xs text-slate-300">Vượt link rút gọn server tốc độ cao để nhận xu ngay lập tức.</p>
+        <button onclick="startTask()" class="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-lg active:scale-95 transition">
+          🚀 BẮT ĐẦU VƯỢT LINK 1
+        </button>
+      </div>
+
+      <!-- 3. Nhiệm vụ vượt link VIP 2 -->
+      <div class="glass-card p-4 rounded-2xl space-y-3">
+        <div class="flex justify-between items-center">
+          <h4 class="font-bold text-sm text-slate-100 flex items-center gap-2">
+            <i class="fa-solid fa-fire text-rose-400"></i> Vượt LinkVIP Sever 2
+          </h4>
+          <span class="text-[10px] bg-indigo-500/30 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30 font-bold">+1,500 DCOIN</span>
+        </div>
+        <p class="text-xs text-slate-300">Nhiệm vụ vượt link dự phòng phần thưởng cao hơn.</p>
+        <button onclick="startTask()" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-black py-2.5 rounded-xl text-xs shadow-lg active:scale-95 transition">
+          🔥 BẮT ĐẦU VƯỢT LINK 2
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB 3: BẢNG XẾP HẠNG -->
+    <div id="tab-leaderboard" class="tab-content space-y-4">
+      <div class="text-center space-y-1">
+        <h3 class="font-black text-lg text-yellow-400"><i class="fa-solid fa-trophy"></i> BẢNG XẾP HẠNG VỮNG VÀNG</h3>
+        <p class="text-xs text-slate-400">Top 10 thành viên cày xu nhiều nhất hệ thống</p>
+      </div>
+
+      <div id="podium-container" class="grid grid-cols-3 gap-2 items-end pt-4 pb-2">
+        <!-- Render bằng Javascript -->
+      </div>
+
+      <div id="leaderboard-list" class="space-y-2">
+        <!-- Render bằng Javascript -->
+      </div>
+    </div>
+
+    <!-- TAB 4: RÚT TIỀN -->
     <div id="tab-withdraw" class="tab-content space-y-4">
       <div class="glass-card p-5 rounded-2xl space-y-4">
         <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
           <i class="fa-solid fa-wallet text-indigo-400"></i> Rút Tiền Về Ví
         </h3>
-        
         <div class="space-y-1">
-          <label class="text-xs text-slate-400">Số lượng DCOIN cần rút (Tối thiểu 10,000)</label>
-          <input id="withdraw-amount" type="number" placeholder="Ví dụ: 10000" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+          <label class="text-xs text-slate-400">Số DCOIN cần rút (Tối thiểu 10,000)</label>
+          <input id="withdraw-amount" type="number" placeholder="Ví dụ: 10000" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 text-slate-100">
         </div>
-
         <div class="space-y-1">
-          <label class="text-xs text-slate-400">Thông tin Ngân Hàng / Ví MoMo</label>
-          <input id="withdraw-wallet" type="text" placeholder="STK - Tên Ngân Hàng - Tên Chủ TK" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+          <label class="text-xs text-slate-400">Thông tin Ngân Hàng / MoMo / Thẻ Cào</label>
+          <input id="withdraw-wallet" type="text" placeholder="STK - Tên Ngân Hàng - Chủ Tài Khoản" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 text-slate-100">
         </div>
-
         <button onclick="submitWithdraw()" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold py-3 rounded-xl text-sm shadow-lg active:scale-95 transition">
           XÁC NHẬN RÚT TIỀN
         </button>
       </div>
     </div>
 
+    <!-- TAB 5: LỊCH SỬ RÚT TIỀN -->
+    <div id="tab-history" class="tab-content space-y-4">
+      <div class="glass-card p-5 rounded-2xl space-y-3">
+        <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left text-amber-400"></i> Lịch Sử Rút Tiền Của Bạn
+        </h3>
+        <div id="user-history-list" class="space-y-3">
+          <p class="text-xs text-slate-400 text-center py-4">Đang tải lịch sử...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: TAB ADMIN -->
+    <div id="tab-admin" class="tab-content space-y-4">
+      <div class="glass-card p-5 rounded-2xl space-y-3 border border-amber-500/40">
+        <h3 class="font-bold text-sm text-amber-400 flex items-center gap-2">
+          <i class="fa-solid fa-gift"></i> Tặng Xu Admin (Vô Hạn)
+        </h3>
+        <input id="admin-grant-id" type="text" placeholder="Telegram ID nhận xu" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100">
+        <input id="admin-grant-amount" type="number" placeholder="Số DCOIN muốn tặng" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100">
+        <input id="admin-grant-note" type="text" placeholder="Lời nhắn kèm theo (Ghi chú)" class="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-100">
+        <button onclick="submitAdminGrant()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs shadow">
+          🎁 TẶNG DCOIN NGAY
+        </button>
+      </div>
+
+      <div class="glass-card p-5 rounded-2xl space-y-4 border border-red-500/40">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-sm text-red-400 flex items-center gap-2">
+            <i class="fa-solid fa-crown"></i> Quản Lý Duyệt Đơn
+          </h3>
+          <button onclick="loadAdminWithdraws()" class="text-xs bg-red-900/50 text-red-200 px-2.5 py-1 rounded-lg border border-red-700/50">
+            <i class="fa-solid fa-rotate"></i> Tải lại
+          </button>
+        </div>
+        <div id="admin-withdraw-list" class="space-y-3">
+          <p class="text-xs text-slate-400 text-center py-4">Đang tải đơn...</p>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- BOTTOM NAVIGATION BAR -->
+  <!-- NAVIGATION BAR DƯỚI CÙNG -->
   <div class="fixed bottom-0 left-0 right-0 glass-card border-t border-slate-800 p-2 flex justify-around items-center z-50">
-    <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center gap-1 text-xs text-yellow-400 font-bold">
-      <i class="fa-solid fa-house text-lg"></i> Trang Chủ
+    <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center gap-1 text-[11px] text-yellow-400 font-bold">
+      <i class="fa-solid fa-house text-base"></i> Trang Chủ
     </button>
-    <button onclick="switchTab('withdraw')" id="nav-withdraw" class="flex flex-col items-center gap-1 text-xs text-slate-400 hover:text-slate-200">
-      <i class="fa-solid fa-money-bill-transfer text-lg"></i> Rút Tiền
+    <button onclick="switchTab('tasks')" id="nav-tasks" class="flex flex-col items-center gap-1 text-[11px] text-slate-400">
+      <i class="fa-solid fa-list-check text-base"></i> Nhiệm Vụ
+    </button>
+    <button onclick="switchTab('leaderboard')" id="nav-leaderboard" class="flex flex-col items-center gap-1 text-[11px] text-slate-400">
+      <i class="fa-solid fa-trophy text-base"></i> Đua Top
+    </button>
+    <button onclick="switchTab('withdraw')" id="nav-withdraw" class="flex flex-col items-center gap-1 text-[11px] text-slate-400">
+      <i class="fa-solid fa-money-bill-transfer text-base"></i> Rút Tiền
+    </button>
+    <button onclick="switchTab('history')" id="nav-history" class="flex flex-col items-center gap-1 text-[11px] text-slate-400">
+      <i class="fa-solid fa-clock-rotate-left text-base"></i> Lịch Sử
+    </button>
+    <button id="nav-admin-btn" onclick="switchTab('admin')" class="hidden flex-col items-center gap-1 text-[11px] text-red-400 font-bold">
+      <i class="fa-solid fa-crown text-base"></i> Admin
     </button>
   </div>
 
   <script>
     const BACKEND_URL = "https://dcoin-bot.onrender.com";
+    const ADMIN_IDS = [8914123780];
 
     function initApp() {
       const tg = window.Telegram?.WebApp;
       if (tg) {
-        try {
-          tg.ready();
-          tg.expand();
-        } catch(e) {}
-
+        try { tg.ready(); tg.expand(); } catch(e) {}
         const user = tg.initDataUnsafe?.user;
         if (user) {
-          const fullName = (user.first_name || '') + (user.last_name ? ' ' + user.last_name : '');
-          document.getElementById('user-name').innerHTML = (fullName || 'Người dùng') + ' <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>';
+          document.getElementById('user-name').innerHTML = (user.first_name || 'Khách') + ' <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>';
           document.getElementById('user-id').innerText = user.id || '-----';
-          if (user.photo_url) {
-            document.getElementById('user-avatar').src = user.photo_url;
+          if (user.photo_url) document.getElementById('user-avatar').src = user.photo_url;
+
+          if (ADMIN_IDS.includes(Number(user.id))) {
+            document.getElementById('nav-admin-btn').classList.remove('hidden');
+            document.getElementById('nav-admin-btn').classList.add('flex');
           }
         }
       }
@@ -146,19 +285,136 @@
     async function loadUserData() {
       const tg = window.Telegram?.WebApp;
       if (!tg?.initData) return;
-
       try {
         const res = await fetch(`${BACKEND_URL}/api/user-info`, {
           method: "POST",
           headers: { "X-TG-Data": tg.initData }
         });
-
         if (res.ok) {
           const data = await res.json();
-          document.getElementById('user-balance').innerText = Number(data.balance || 0).toLocaleString();
+          const balance = Number(data.balance || 0);
+          document.getElementById('user-balance').innerText = balance.toLocaleString();
           document.getElementById('stat-links').innerText = data.total_links || 0;
+
+          const percent = Math.min(100, Math.floor((balance / 10000) * 100));
+          document.getElementById('progress-bar').style.width = `${percent}%`;
+          document.getElementById('progress-text').innerText = `${percent}%`;
+
+          if (data.unread_notifications && data.unread_notifications.length > 0) {
+            data.unread_notifications.forEach(notif => {
+              alert(`🎉 BẠN NHẬN ĐƯỢC QUÀ TẶNG TỪ ADMIN!\n\n💰 Số tiền: +${notif.amount.toLocaleString()} DCOIN\n💬 Lời nhắn: "${notif.note}"`);
+            });
+          }
         }
       } catch (err) {}
+    }
+      
+    async function loadLeaderboard() {
+      const tg = window.Telegram?.WebApp;
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/leaderboard`, {
+          method: "POST",
+          headers: { "X-TG-Data": tg ? tg.initData : "" }
+        });
+        const result = await res.json();
+        if (result.success && result.data.length > 0) {
+          renderPodium(result.data);
+        }
+      } catch(e) {}
+    }
+
+    function renderPodium(list) {
+      const top1 = list[0] || null;
+      const top2 = list[1] || null;
+      const top3 = list[2] || null;
+      const rest = list.slice(3);
+
+      const podiumHTML = `
+        <!-- TOP 2 -->
+        <div class="flex flex-col items-center">
+          <div class="w-12 h-12 rounded-full border-2 border-slate-300 relative overflow-hidden shadow-lg">
+            <img src="${top2?.avatar || 'https://ui-avatars.com/api/?name=' + (top2?.name || '2')}" class="w-full h-full object-cover">
+          </div>
+          <span class="text-[10px] font-bold text-slate-300 mt-1 truncate max-w-[80px]">${top2?.name || 'Trống'}</span>
+          <span class="text-[9px] text-amber-400 font-extrabold">${top2 ? Number(top2.balance).toLocaleString() : 0}</span>
+          <div class="w-full bg-slate-700 h-16 rounded-t-lg mt-1 flex items-center justify-center font-black text-slate-300 text-sm">2</div>
+        </div>
+
+        <!-- TOP 1 -->
+        <div class="flex flex-col items-center -mt-4">
+          <i class="fa-solid fa-crown text-yellow-400 text-base animate-bounce"></i>
+          <div class="w-16 h-16 rounded-full border-2 border-yellow-400 relative overflow-hidden shadow-2xl glow-gold">
+            <img src="${top1?.avatar || 'https://ui-avatars.com/api/?name=' + (top1?.name || '1')}" class="w-full h-full object-cover">
+          </div>
+          <span class="text-xs font-bold text-yellow-400 mt-1 truncate max-w-[90px]">${top1?.name || 'Trống'}</span>
+          <span class="text-[10px] text-amber-400 font-extrabold">${top1 ? Number(top1.balance).toLocaleString() : 0}</span>
+          <div class="w-full bg-gradient-to-b from-amber-500 to-yellow-600 h-24 rounded-t-lg mt-1 flex items-center justify-center font-black text-slate-950 text-xl shadow-lg">1</div>
+        </div>
+
+        <!-- TOP 3 -->
+        <div class="flex flex-col items-center">
+          <div class="w-12 h-12 rounded-full border-2 border-amber-700 relative overflow-hidden shadow-lg">
+            <img src="${top3?.avatar || 'https://ui-avatars.com/api/?name=' + (top3?.name || '3')}" class="w-full h-full object-cover">
+          </div>
+          <span class="text-[10px] font-bold text-amber-600 mt-1 truncate max-w-[80px]">${top3?.name || 'Trống'}</span>
+          <span class="text-[9px] text-amber-400 font-extrabold">${top3 ? Number(top3.balance).toLocaleString() : 0}</span>
+          <div class="w-full bg-amber-900/80 h-12 rounded-t-lg mt-1 flex items-center justify-center font-black text-amber-400 text-xs">3</div>
+        </div>
+      `;
+
+      document.getElementById('podium-container').innerHTML = podiumHTML;
+
+      document.getElementById('leaderboard-list').innerHTML = rest.map((item, idx) => `
+        <div class="glass-card p-3 rounded-xl flex justify-between items-center text-xs">
+          <div class="flex items-center gap-3">
+            <span class="font-bold text-slate-400 w-4">#${idx + 4}</span>
+            <img src="${item.avatar || 'https://ui-avatars.com/api/?name=' + item.name}" class="w-8 h-8 rounded-full border border-slate-700">
+            <div>
+              <p class="font-bold text-slate-200">${item.name}</p>
+              <p class="text-[10px] text-slate-500">ID: ${item.user_id}</p>
+            </div>
+          </div>
+          <span class="font-extrabold text-amber-400">${Number(item.balance).toLocaleString()} DCOIN</span>
+        </div>
+      `).join('');
+    }
+
+    async function loadUserHistory() {
+      const tg = window.Telegram?.WebApp;
+      const list = document.getElementById('user-history-list');
+      list.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Đang tải lịch sử...</p>`;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/user-history`, {
+          method: "POST",
+          headers: { "X-TG-Data": tg ? tg.initData : "" }
+        });
+        const result = await res.json();
+
+        if (result.success && result.data.length > 0) {
+          list.innerHTML = result.data.map(item => {
+            let statusBadge = `<span class="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">⏳ Đang xử lý</span>`;
+            if (item.status === 'approved') statusBadge = `<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">✅ Thành công</span>`;
+            if (item.status === 'rejected') statusBadge = `<span class="bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">❌ Đã hủy (Hoàn xu)</span>`;
+            if (item.status === 'held') statusBadge = `<span class="bg-purple-500/20 text-purple-300 border border-purple-500/30 px-2 py-0.5 rounded-full text-[10px] font-bold">🔒 Tạm giữ</span>`;
+
+            return `
+              <div class="bg-slate-900/80 border border-slate-700 p-3.5 rounded-xl space-y-2">
+                <div class="flex justify-between items-center">
+                  <span class="font-bold text-amber-400 text-xs">-${Number(item.amount).toLocaleString()} DCOIN</span>
+                  ${statusBadge}
+                </div>
+                <p class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2 rounded border border-slate-800/80">${item.wallet_info}</p>
+                <p class="text-[10px] text-slate-400 italic">💬 Ghi chú: ${item.note}</p>
+              </div>
+            `;
+          }).join('');
+        } else {
+          list.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Bạn chưa thực hiện lệnh rút tiền nào.</p>`;
+        }
+      } catch(e) {
+        list.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Lỗi tải dữ liệu!</p>`;
+      }
     }
 
     async function submitWithdraw() {
@@ -167,7 +423,7 @@
       const wallet = document.getElementById('withdraw-wallet').value.trim();
 
       if (!amount || amount < 10000) return alert("Số tiền rút tối thiểu là 10,000 DCOIN!");
-      if (!wallet) return alert("Vui lòng nhập đầy đủ thông tin nhận tiền!");
+      if (!wallet) return alert("Vui lòng nhập thông tin ví nhận tiền!");
 
       try {
         const res = await fetch(`${BACKEND_URL}/api/withdraw`, {
@@ -178,7 +434,6 @@
           },
           body: JSON.stringify({ amount: amount, wallet_info: wallet })
         });
-
         const data = await res.json();
         alert(data.message);
         if (data.success) {
@@ -186,35 +441,134 @@
           document.getElementById('withdraw-wallet').value = '';
           loadUserData();
         }
-      } catch (e) {
-        alert("Lỗi kết nối máy chủ! Vui lòng thử lại.");
-      }
+      } catch(e) { alert("Lỗi kết nối!"); }
+    }
+
+    async function loadAdminWithdraws() {
+      const tg = window.Telegram?.WebApp;
+      const list = document.getElementById('admin-withdraw-list');
+      list.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Đang tải danh sách...</p>`;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/pending-withdraws`, {
+          method: "POST",
+          headers: { "X-TG-Data": tg ? tg.initData : "" }
+        });
+        const result = await res.json();
+
+        if (result.success && result.data.length > 0) {
+          list.innerHTML = result.data.map(item => `
+            <div class="bg-slate-900/90 border border-slate-700 p-3.5 rounded-xl space-y-2">
+              <div class="flex justify-between items-center text-xs">
+                <div class="flex items-center gap-2">
+                  <img src="${item.avatar || 'https://ui-avatars.com/api/?name=' + item.user_name}" class="w-7 h-7 rounded-full border border-slate-600">
+                  <span class="font-bold text-slate-200">${item.user_name} <span class="text-slate-500">(${item.user_id})</span></span>
+                </div>
+                <span class="font-extrabold text-amber-400">+${Number(item.amount).toLocaleString()} DCOIN</span>
+              </div>
+              <p class="text-[11px] text-slate-300 font-mono bg-slate-950 p-2 rounded border border-slate-800">${item.wallet_info}</p>
+              
+              <a href="https://t.me/${item.username || ''}" target="_blank" class="inline-block text-[10px] text-indigo-400 hover:underline">
+                <i class="fa-brands fa-telegram"></i> Nhắn Telegram: @${item.username || 'Không có'}
+              </a>
+
+              <div class="grid grid-cols-3 gap-1.5 pt-1">
+                <button onclick="handleAdminAction(${item.id}, 'approve')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-lg text-[10px]">
+                  ✅ DUYỆT
+                </button>
+                <button onclick="handleAdminAction(${item.id}, 'reject')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-1.5 rounded-lg text-[10px]">
+                  ❌ TỪ CHỐI
+                </button>
+                <button onclick="handleAdminAction(${item.id}, 'hold')" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-1.5 rounded-lg text-[10px]">
+                  🔒 GIỮ XU
+                </button>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          list.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Hiện không có đơn nào!</p>`;
+        }
+      } catch(e) { list.innerHTML = `<p class="text-xs text-rose-400 text-center py-4">Lỗi kết nối!</p>`; }
+    }
+
+    async function handleAdminAction(withdrawId, action) {
+      const tg = window.Telegram?.WebApp;
+      const note = prompt("Nhập ghi chú cho người dùng (nếu có):") || "";
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/action-withdraw`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-TG-Data": tg ? tg.initData : ""
+          },
+          body: JSON.stringify({ withdraw_id: withdrawId, action: action, note: note })
+        });
+        const data = await res.json();
+        alert(data.message);
+        loadAdminWithdraws();
+      } catch(e) { alert("Lỗi thao tác!"); }
+    }
+
+    async function submitAdminGrant() {
+      const tg = window.Telegram?.WebApp;
+      const targetId = document.getElementById('admin-grant-id').value.trim();
+      const amount = parseFloat(document.getElementById('admin-grant-amount').value);
+      const note = document.getElementById('admin-grant-note').value.trim();
+
+      if (!targetId || !amount) return alert("Vui lòng nhập ID và số DCOIN!");
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/grant-dcoin`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-TG-Data": tg ? tg.initData : ""
+          },
+          body: JSON.stringify({ target_user_id: targetId, amount: amount, note: note })
+        });
+        const data = await res.json();
+        alert(data.message);
+        if (data.success) {
+          document.getElementById('admin-grant-id').value = '';
+          document.getElementById('admin-grant-amount').value = '';
+          document.getElementById('admin-grant-note').value = '';
+        }
+      } catch(e) { alert("Lỗi gửi dữ liệu!"); }
     }
 
     function switchTab(tab) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(`tab-${tab}`).classList.add('active');
       
-      document.getElementById('nav-home').className = tab === 'home' ? 'flex flex-col items-center gap-1 text-xs text-yellow-400 font-bold' : 'flex flex-col items-center gap-1 text-xs text-slate-400';
-      document.getElementById('nav-withdraw').className = tab === 'withdraw' ? 'flex flex-col items-center gap-1 text-xs text-yellow-400 font-bold' : 'flex flex-col items-center gap-1 text-xs text-slate-400';
+      if (tab === 'leaderboard') loadLeaderboard();
+      if (tab === 'history') loadUserHistory();
+      if (tab === 'admin') loadAdminWithdraws();
+
+      const tabs = ['home', 'tasks', 'leaderboard', 'withdraw', 'history', 'admin'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`nav-${t}`);
+        if (btn) {
+          btn.className = (t === tab) ? 'flex flex-col items-center gap-1 text-[11px] text-yellow-400 font-bold' : 'flex flex-col items-center gap-1 text-[11px] text-slate-400';
+        }
+      });
+    }
+
+    function claimDaily() {
+      alert("🎉 Bạn đã nhận +500 DCOIN điểm danh hôm nay!");
+      const btn = document.getElementById('btn-daily');
+      btn.disabled = true; btn.innerText = "ĐÃ NHẬN";
+      btn.className = "bg-slate-700 text-slate-400 font-bold px-3.5 py-2 rounded-xl text-xs cursor-not-allowed";
     }
 
     function startTask() {
       const tg = window.Telegram?.WebApp;
-      if (tg) {
-        tg.openLink('https://your-shortlink-domain.com');
-      } else {
-        window.open('https://your-shortlink-domain.com', '_blank');
-      }
+      if (tg) tg.openLink('https://your-shortlink-domain.com');
+      else window.open('https://your-shortlink-domain.com', '_blank');
     }
 
-    // Chạy ngay khi tải xong
     document.addEventListener("DOMContentLoaded", initApp);
-    if (document.readyState === "interactive" || document.readyState === "complete") {
-      initApp();
-    }
+    if (document.readyState === "interactive" || document.readyState === "complete") initApp();
   </script>
 </body>
 </html>
-
-  

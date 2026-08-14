@@ -18,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8116280112:AAERR6AH23JavjshO073QZmcDH7_qDEwdro")
 ADMIN_ID = 8914123780
 
 # Đường dẫn file dữ liệu
@@ -270,10 +270,10 @@ def telegram_webhook(update: dict):
                 "reply_markup": {
                     "inline_keyboard": [
                         [
-                            {"text": "📢 Kênh Thông Báo Telegram", "url": "https://t.me/your_channel_link"},
+                            {"text": "📢 Kênh Thông Báo", "url": "https://t.me/kenhthongbaodab_roblox"},
                         ],
                         [
-                            {"text": "💬 Nhóm Hỗ Trợ Cộng Đồng", "url": "https://t.me/your_group_link"}
+                            {"text": "💬 Nhóm Chat MMO", "https://t.me/nhomchatdanmmo"}
                         ],
                         [
                             {"text": "🚀 MỞ MINI APP KIẾM DCOIN", "web_app": {"url": "https://your-app.vercel.app"}}

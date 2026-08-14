@@ -1,314 +1,252 @@
-import os, threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-
-class Health(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-
-threading.Thread(target=lambda: HTTPServer(('0.0.0.0', int(os.environ.get('PORT', 8080))), Health).serve_forever(), daemon=True).start()
-import sqlite3
+import os
 import json
-import logging
-import random
-import string
-import time
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+import hmac
+import hashlib
+import sqlite3
+import urllib.parse
+import asyncio
+import threading
+from datetime import datetime
 
-# ==================== CẤU HÌNH BOT ====================
-TOKEN = "8116280112:AAERR6AH23JavjshO073QZmcDH7_qDEwdro"
-ADMIN_ID = 8914123780                         # Thay Telegram ID của bạn vào đây
-WEBAPP_URL = "https://vuotlinkkiemtien.vercel.app" # Thay Link Vercel/GitHub Pages của bạn
+import uvicorn
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
-# API KEY CÁC TRANG RÚT GỌN LINK
-LINK4M_API = "YOUR_LINK4M_API_KEY"
-TRAFFICVN_API = "YOUR_TRAFFICVN_API_KEY"
-YEUTIEPTHI_API = "YOUR_YEUTIEPTHI_API_KEY"
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# CẤU HÌNH ANTI-CHEAT VIP
-MIN_TASK_TIME_SECONDS = 25  # Thời gian tối thiểu vượt link (Dưới 25s = Auto Tool Bypass)
-TOKEN_EXPIRE_SECONDS = 900  # Mã Token hết hạn sau 15 phút (900 giây)
-# =======================================================
+# ==================== CẤU HÌNH HỆ THỐNG ====================
+BOT_TOKEN = "THAY_TOKEN_BOT_CỦA_BẠN_VÀO_ĐÂY"
+ADMIN_ID = 123456789  # ⚠️ Thay ID Telegram số của Admin vào đây
+WEBAPP_URL = "https://vuotlinkkiemtien.vercel.app"
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# ==================== CƠ SỞ DỮ LIỆU SQLITE ====================
+DB_NAME = "database.db"
 
-# KHỞI TẠO CƠ SỞ DỮ LIỆU SQLITE
 def init_db():
-    conn = sqlite3.connect("dcoin_app.db")
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    
-    # Bảng User
-    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-        user_id INTEGER PRIMARY KEY,
-        balance REAL DEFAULT 0,
-        week_dcoin REAL DEFAULT 0,
-        month_dcoin REAL DEFAULT 0,
-        total_links INTEGER DEFAULT 0,
-        is_banned INTEGER DEFAULT 0,
-        cheat_warnings INTEGER DEFAULT 0,
-        saved_holder TEXT DEFAULT '',
-        saved_stk TEXT DEFAULT ''
-    )''')
-    
-    # Bảng Token Anti-Cheat
-    cursor.execute('''CREATE TABLE IF NOT EXISTS task_tokens (
-        token_code TEXT PRIMARY KEY,
-        user_id INTEGER,
-        platform TEXT,
-        reward_amount INTEGER,
-        created_at REAL,
-        status TEXT DEFAULT 'PENDING'
-    )''')
-    
+    # Bảng người dùng
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            username TEXT,
+            first_name TEXT,
+            balance REAL DEFAULT 0,
+            total_links INTEGER DEFAULT 0,
+            created_at TEXT
+        )
+    ''')
+    # Bảng lịch sử rút tiền
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS withdrawals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            amount REAL,
+            wallet_info TEXT,
+            status TEXT DEFAULT 'PENDING',
+            created_at TEXT
+        )
+    ''')
     conn.commit()
     conn.close()
 
-def get_user_data(user_id):
-    conn = sqlite3.connect("dcoin_app.db")
+init_db()
+
+# ==================== ANTI-CHEAT: XÁC THỰC HMAC TELEGRAM ====================
+def verify_telegram_init_data(init_data: str) -> dict:
+    """Xác thực chữ ký HMAC-SHA256 từ Telegram SDK.
+    Bảo vệ 100% khỏi DevTools / Postman / Fake Request."""
+    try:
+        parsed_data = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
+        if "hash" not in parsed_data:
+            return None
+        
+        received_hash = parsed_data.pop("hash")
+        data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(parsed_data.items()))
+        
+        secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode('utf-8'), hashlib.sha256).digest()
+        calculated_hash = hmac.new(secret_key, data_check_string.encode('utf-8'), hashlib.sha256).hexdigest()
+        
+        if hmac.compare_digest(calculated_hash, received_hash):
+            return json.loads(parsed_data.get("user", "{}"))
+        return None
+    except Exception:
+        return None
+
+# ==================== FASTAPI WEB SERVER ====================
+app = FastAPI(title="DCOIN Backend API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class WithdrawRequest(BaseModel):
+    amount: float
+    wallet_info: str
+
+@app.get("/")
+def health_check():
+    return {"status": "online", "system": "DCOIN VIP Engine"}
+
+@app.post("/api/user-info")
+def get_user_info(x_tg_data: str = Header(None)):
+    if not x_tg_data:
+        raise HTTPException(status_code=401, detail="Missing Authentication Header")
+    
+    tg_user = verify_telegram_init_data(x_tg_data)
+    if not tg_user:
+        raise HTTPException(status_code=401, detail="Anti-Cheat Triggered: Invalid Token")
+    
+    user_id = tg_user['id']
+    username = tg_user.get('username', '')
+    first_name = tg_user.get('first_name', 'User')
+    
+    conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT balance, week_dcoin, month_dcoin, total_links, is_banned, cheat_warnings FROM users WHERE user_id = ?", (user_id,))
+    cursor.execute("SELECT balance, total_links FROM users WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
+    
     if not row:
-        cursor.execute("INSERT INTO users (user_id) VALUES (?)", (user_id,))
+        cursor.execute(
+            "INSERT INTO users (user_id, username, first_name, balance, total_links, created_at) VALUES (?, ?, ?, 0, 0, ?)",
+            (user_id, username, first_name, datetime.now().isoformat())
+        )
         conn.commit()
-        data = (0, 0, 0, 0, 0, 0)
+        balance, total_links = 0.0, 0
     else:
-        data = row
+        balance, total_links = row[0], row[1]
+        
     conn.close()
-    return data
-
-def generate_random_token():
-    return "DC-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-
-# LỆNH /START
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    data = get_user_data(user_id)
     
-    if data[4] == 1:
-        await update.message.reply_text("🚫 **TÀI KHOẢN CỦA BẠN ĐÃ BỊ KHÓA VĨNH VIỄN DO DÙNG TOOL GIAN LẬN!**", parse_mode="Markdown")
-        return
+    return {
+        "user_id": user_id,
+        "first_name": first_name,
+        "username": username,
+        "balance": balance,
+        "total_links": total_links
+    }
 
-    keyboard = [[KeyboardButton("🚀 MỞ DCOIN MINI APP", web_app=WebAppInfo(url=WEBAPP_URL))]]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+@app.post("/api/withdraw")
+def request_withdraw(req: WithdrawRequest, x_tg_data: str = Header(None)):
+    if not x_tg_data:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     
+    tg_user = verify_telegram_init_data(x_tg_data)
+    if not tg_user:
+        raise HTTPException(status_code=401, detail="Anti-Cheat: Auth Failed")
+    
+    user_id = tg_user['id']
+    amount = req.amount
+    
+    if amount < 10000:  # Hạn mức tối thiểu 10,000 DCOIN
+        return {"success": False, "message": "Số dư rút tối thiểu là 10,000 DCOIN!"}
+        
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    
+    if not row or row[0] < amount:
+        conn.close()
+        return {"success": False, "message": "Số dư không đủ!"}
+    
+    # Trừ tiền & tạo lệnh rút
+    new_balance = row[0] - amount
+    cursor.execute("UPDATE users SET balance = ? WHERE user_id = ?", (new_balance, user_id))
+    cursor.execute(
+        "INSERT INTO withdrawals (user_id, amount, wallet_info, created_at) VALUES (?, ?, ?, ?)",
+        (user_id, amount, req.wallet_info, datetime.now().isoformat())
+    )
+    withdraw_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    # Bắn thông báo trực tiếp về Telegram cho ADMIN
+    asyncio.run_coroutine_threadsafe(
+        send_admin_withdraw_notification(withdraw_id, user_id, tg_user.get('first_name', ''), amount, req.wallet_info),
+        bot_loop
+    )
+    
+    return {"success": True, "message": "Yêu cầu rút tiền thành công!", "new_balance": new_balance}
+
+# ==================== BOT TELEGRAM ====================
+bot_app = ApplicationBuilder().token(BOT_TOKEN).build()
+bot_loop = None
+
+async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    kb = InlineKeyboardMarkup([[
+        InlineKeyboardButton("🚀 Mở DCOIN App VIP", web_app={"url": WEBAPP_URL})
+    ]])
     await update.message.reply_text(
-        f"👋 **Chào mừng bạn đến với DCOIN System!**\n\n"
-        f"🛡️ *Hệ thống Anti-Cheat VIP đang bật để đảm bảo sự công bằng.*\n"
-        f"Nhấn nút bên dưới để bắt đầu làm nhiệm vụ kiếm DCOIN.",
-        reply_markup=reply_markup,
+        f"👋 Chào mừng **{user.first_name}** đến với DCOIN System!\n\nBấm nút bên dưới để bắt đầu làm nhiệm vụ và rút tiền nhé.",
+        reply_markup=kb,
         parse_mode="Markdown"
     )
 
-# XỬ LÝ SỰ KIỆN TỪ WEBAPP (SEND DATA)
-async def web_app_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    user_name = update.effective_user.full_name
-    data_user = get_user_data(user_id)
+async def send_admin_withdraw_notification(w_id, user_id, name, amount, wallet):
+    text = (
+        f"🚨 **YÊU CẦU RÚT TIỀN MỚI #{w_id}**\n\n"
+        f"👤 **Khách hàng:** {name} (`{user_id}`)\n"
+        f"💰 **Số tiền:** {amount:,.0f} DCOIN\n"
+        f"💳 **Ví/Ngân hàng:** `{wallet}`"
+    )
+    kb = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✅ Duyệt", callback_data=f"app_{w_id}_{user_id}_{amount}"),
+            InlineKeyboardButton("❌ Từ Chối", callback_data=f"rej_{w_id}_{user_id}_{amount}")
+        ]
+    ])
+    try:
+        await bot_app.bot.send_message(chat_id=ADMIN_ID, text=text, reply_markup=kb, parse_mode="Markdown")
+    except Exception as e:
+        print(f"Error sending admin alert: {e}")
 
-    if data_user[4] == 1:
-        await update.message.reply_text("🚫 Tài khoản đã bị khóa vĩnh viễn!")
-        return
-
-    raw_data = update.effective_message.web_app_data.data
-    data = json.loads(raw_data)
-    req_type = data.get("type")
-
-    # 1. YÊU CẦU TẠO LINK NHIỆM VỤ CÓ MÃ TOKEN ANTI-CHEAT
-    if req_type == "request_task_link":
-        platform = data.get("platform", "link4m")
-        reward_map = {"link4m": 350, "trafficvn": 300, "layma": 400, "yeutiepthi": 500}
-        reward = reward_map.get(platform, 300)
-        
-        token_code = generate_random_token()
-        now = time.time()
-
-        conn = sqlite3.connect("dcoin_app.db")
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO task_tokens (token_code, user_id, platform, reward_amount, created_at) VALUES (?, ?, ?, ?, ?)",
-                       (token_code, user_id, platform, reward, now))
+async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data.split("_")
+    action, w_id, user_id, amount = data[0], data[1], data[2], float(data[3])
+    
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    if action == "app":
+        cursor.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = ?", (w_id,))
         conn.commit()
-        conn.close()
-
-        # Tạo URL đích kèm Token
-        destination_url = f"https://yourdomain.com/landing?token={token_code}"
-        
-        if platform == "trafficvn":
-            short_link = f"https://trafficvn.net/st?api={TRAFFICVN_API}&url={destination_url}"
-        elif platform == "yeutiepthi":
-            short_link = f"https://yeutiepthi.org/st?api={YEUTIEPTHI_API}&url={destination_url}"
-        else:
-            short_link = f"https://link4m.co/st?api={LINK4M_API}&url={destination_url}"
-
-        await update.message.reply_text(
-            f"🔗 **LINK NHIỆM VỤ ({platform.upper()}):**\n\n"
-            f"👉 **Truy cập link:** {short_link}\n\n"
-            f"🔑 **MÃ XÁC NHẬN CỦA BẠN:** `{token_code}`\n"
-            f"Sau khi vượt link xong, lấy mã `{token_code}` dán vào Mini App hoặc gõ `/xacnhan {token_code}` để nhận **+{reward} DCOIN**.\n\n"
-            f"⏳ *Mã có thời hạn 15 phút. Cấm sử dụng Tool Auto Bypass!*",
-            parse_mode="Markdown"
-        )
-
-    # 2. XÁC NHẬN MÃ TOKEN (ANTI-CHEAT VIP CHECK)
-    elif req_type == "verify_task_code":
-        code = data.get("code", "").strip().upper()
-        now = time.time()
-
-        conn = sqlite3.connect("dcoin_app.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT user_id, platform, reward_amount, created_at, status FROM task_tokens WHERE token_code = ?", (code,))
-        token_data = cursor.fetchone()
-
-        if not token_data:
-            await update.message.reply_text("❌ **Mã xác nhận Không Hợp Lệ!**", parse_mode="Markdown")
-            conn.close()
-            return
-
-        t_user_id, platform, reward, created_at, status = token_data
-
-        if t_user_id != user_id:
-            await update.message.reply_text("⚠️ **CẢNH BÁO:** Mã Token này không thuộc về bạn!", parse_mode="Markdown")
-            conn.close()
-            return
-
-        if status == 'COMPLETED':
-            await update.message.reply_text("❌ **Mã Token này ĐÃ SỬ DỤNG rồi!**", parse_mode="Markdown")
-            conn.close()
-            return
-
-        time_taken = now - created_at
-
-        # KIỂM TRA TOOL BYPASS (Dưới 25s)
-        if time_taken < MIN_TASK_TIME_SECONDS:
-            cursor.execute("UPDATE users SET cheat_warnings = cheat_warnings + 1 WHERE user_id = ?", (user_id,))
-            cursor.execute("SELECT cheat_warnings FROM users WHERE user_id = ?", (user_id,))
-            warnings = cursor.fetchone()[0]
-
-            if warnings >= 3:
-                cursor.execute("UPDATE users SET is_banned = 1 WHERE user_id = ?", (user_id,))
-                conn.commit()
-                await update.message.reply_text("🚫 **TÀI KHOẢN ĐÃ BỊ KHÓA VĨNH VIỄN DO SỬ DỤNG TOOL BYPASS!**")
-            else:
-                conn.commit()
-                await update.message.reply_text(
-                    f"🚨 **PHÁT HIỆN GIAN LẬN!**\n\n"
-                    f"⏱️ Bạn hoàn thành trong **{int(time_taken)}s** (Yêu cầu tối thiểu {MIN_TASK_TIME_SECONDS}s).\n"
-                    f"⚠️ Cảnh báo: **{warnings}/3 lần**. Đạt 3 lần sẽ bị KHOÁ TK!",
-                    parse_mode="Markdown"
-                )
-            conn.close()
-            return
-
-        if time_taken > TOKEN_EXPIRE_SECONDS:
-            await update.message.reply_text("⏰ **Mã Token đã QUÁ HẠN 15 PHÚT!** Vui lòng lấy link mới.", parse_mode="Markdown")
-            conn.close()
-            return
-
-        # CỘNG DCOIN & CẬP NHẬT TRẠNG THÁI
-        cursor.execute("UPDATE task_tokens SET status = 'COMPLETED' WHERE token_code = ?", (code,))
-        cursor.execute("UPDATE users SET balance = balance + ?, week_dcoin = week_dcoin + ?, month_dcoin = month_dcoin + ?, total_links = total_links + 1 WHERE user_id = ?",
-                       (reward, reward, reward, user_id))
-        
-        cursor.execute("SELECT balance FROM users WHERE user_id = ?", (user_id,))
-        new_balance = cursor.fetchone()[0]
-        
+        await query.edit_message_text(f"{query.message.text}\n\n STATUS: **ĐÃ DUYỆT ✅**", parse_mode="Markdown")
+        await bot_app.bot.send_message(chat_id=int(user_id), text=f"🎉 Lệnh rút {amount:,.0f} DCOIN của bạn đã được duyệt!")
+    elif action == "rej":
+        # Hoàn tiền lại cho user
+        cursor.execute("UPDATE withdrawals SET status = 'REJECTED' WHERE id = ?", (w_id,))
+        cursor.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amount, user_id))
         conn.commit()
-        conn.close()
+        await query.edit_message_text(f"{query.message.text}\n\n STATUS: **ĐÃ TỪ CHỐI ❌ (Đã hoàn xu)**", parse_mode="Markdown")
+        await bot_app.bot.send_message(chat_id=int(user_id), text=f"❌ Lệnh rút {amount:,.0f} DCOIN bị từ chối. Xu đã được hoàn về tài khoản.")
+        
+    conn.close()
 
-        # Báo tin nhắn Telegram
-        await update.message.reply_text(
-            f"🎉 **XÁC NHẬN THÀNH CÔNG!**\n\n"
-            f"🔑 Mã Token: `{code}`\n"
-            f"⏱️ Thời gian vượt: **{int(time_taken)}s** (Hợp lệ)\n"
-            f"💰 Tiền thưởng: **+{reward} DCOIN**\n"
-            f"💳 Số dư hiện tại: **{new_balance:,.0f} DCOIN**",
-            parse_mode="Markdown"
-        )
+bot_app.add_handler(CommandHandler("start", start_cmd))
+bot_app.add_handler(CallbackQueryHandler(handle_callback))
 
-    # 3. RÚT TIỀN NGÂN HÀNG
-    elif req_type == "withdraw_bank":
-        bank, holder, stk, amount = data.get("bank"), data.get("holder").upper(), data.get("stk"), int(data.get("amount"))
-        await update.message.reply_text(
-            f"✅ **ĐÃ GỬI LỆNH RÚT NGÂN HÀNG!**\n\n"
-            f"🏦 Ngân hàng: **{bank}**\n"
-            f"👤 Chủ TK: **{holder}**\n"
-            f"💳 Số TK: `{stk}`\n"
-            f"💵 Số tiền: **{amount:,} DCOIN**",
-            parse_mode="Markdown"
-        )
-        await context.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=f"🚨 **RÚT NGÂN HÀNG:** {user_name} (`{user_id}`)\n🏦 {bank} | `{stk}` | `{holder}`\n💰 Số tiền: `{amount:,} VNĐ`",
-            parse_mode="Markdown"
-        )
-
-    # 4. ĐỔI THẺ CÀO
-    elif req_type == "withdraw_card":
-        prov, amount = data.get("provider"), int(data.get("amount"))
-        await update.message.reply_text(f"✅ Đã gửi yêu cầu đổi thẻ **{prov}** mệnh giá **{amount:,} DCOIN**.")
-        await context.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=f"🚨 **ĐỔI THẺ CÀO:** {user_name} (`{user_id}`)\n💳 Loại thẻ: `{prov}`\n💰 Mệnh giá: `{amount:,} VNĐ`",
-            parse_mode="Markdown"
-        )
-
-    # 5. NẠP GAME (TỰ ĐỘNG CHUYỂN ROBLOX SANG USERNAME)
-    elif req_type == "withdraw_game":
-        game_type = data.get("game_type", "game")
-        game_user_id = data.get("game_user_id")
-        pkg_name = data.get("pkg_name")
-        price = int(data.get("price"))
-
-        if game_type == "roblox":
-            label_name = "Username Roblox"
-            game_display = "Roblox"
-        else:
-            label_name = "ID Game"
-            game_display = game_type.upper()
-
-        await update.message.reply_text(
-            f"✅ **ĐÃ GỬI YÊU CẦU NẠP {game_display}!**\n\n"
-            f"🎮 Gói: **{pkg_name}**\n"
-            f"👤 {label_name}: `{game_user_id}`\n"
-            f"💵 Trừ số dư: **{price:,} DCOIN**",
-            parse_mode="Markdown"
-        )
-
-        admin_alert = (
-            f"🎮 **YÊU CẦU NẠP GAME MỚI!**\n\n"
-            f"👤 **Khách:** {user_name} (`{user_id}`)\n"
-            f"🎯 **Game:** `{game_display}`\n"
-            f"🔑 **{label_name}:** `{game_user_id}`\n"
-            f"🎁 **Gói Nạp:** `{pkg_name}`\n"
-            f"💵 **Trị giá:** `{price:,} DCOIN`\n\n"
-            f"👉 Nạp gói **{pkg_name}** cho {label_name}: `{game_user_id}`!"
-        )
-        await context.bot.send_message(chat_id=ADMIN_ID, text=admin_alert, parse_mode="Markdown")
-
-    # 6. LƯU CẤU HÌNH NGÂN HÀNG
-    elif req_type == "save_bank":
-        holder, stk = data.get("holder").upper(), data.get("stk")
-        conn = sqlite3.connect("dcoin_app.db")
-        cursor = conn.cursor()
-        cursor.execute("UPDATE users SET saved_holder = ?, saved_stk = ? WHERE user_id = ?", (holder, stk, user_id))
-        conn.commit()
-        conn.close()
-
-# LỆNH XÁC NHẬN DỰ PHÒNG QUA CHAT
-async def xacnhan_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("⚠️ Cú pháp: `/xacnhan [MÃ_TOKEN]` (Ví dụ: `/xacnhan DC-X8921A`)", parse_mode="Markdown")
-        return
-    code = context.args[0].strip().upper()
-    update.effective_message.web_app_data = type('obj', (object,), {'data': json.dumps({'type': 'verify_task_code', 'code': code})})
-    await web_app_handler(update, context)
+# ==================== KHỞI CHẠY KHÔNG DỪNG (RENDER SAFE) ====================
+def run_fastapi():
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     init_db()
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("xacnhan", xacnhan_command))
-    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_handler))
-    print("🚀 DCOIN Engine Complete System Running!")
-    app.run_polling()
+    
+    # Chạy FastAPI ở Thread riêng
+    threading.Thread(target=run_fastapi, daemon=True).start()
+    
+    # Chạy Telegram Bot ở Main Thread
+    bot_loop = asyncio.get_event_loop()
+    print("🚀 DCOIN Engine VIP System Online!")
+    bot_app.run_polling()

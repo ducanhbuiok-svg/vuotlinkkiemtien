@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DCOIN Mini App - Full Version</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { -webkit-tap-highlight-color: transparent; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-20 select-none">
+
+    <!-- HEADER HIỂN THỊ THÔNG TIN USER -->
+    <div class="bg-slate-800 p-4 border-b border-slate-700 sticky top-0 z-40 flex justify-between items-center shadow-lg">
+        <div class="flex items-center gap-3">
+            <img id="user-avatar" src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" class="w-10 h-10 rounded-full border-2 border-yellow-500">
+            <div>
+                <h4 id="user-name" class="font-bold text-sm text-yellow-400">Đang tải...</h4>
+                <p class="text-xs text-slate-400">ID: <span id="user-id">000000</span></p>
+            </div>
+        </div>
+        <div class="bg-yellow-500/10 border border-yellow-500/30 px-3 py-1.5 rounded-full flex items-center gap-2">
+            <i class="fa-solid font-bold text-yellow-400 fa-coins text-sm"></i>
+            <span id="user-balance" class="font-extrabold text-yellow-400 text-sm">0 DCOIN</span>
+        </div>
+    </div>
+
+    <div class="p-4 max-w-md mx-auto">
+
+        <!-- ================= TAB 1: TRANG CHỦ ================= -->
+        <div id="tab-home" class="tab-content active space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
+                    <p class="text-xs text-slate-400 font-semibold uppercase">Kiếm tuần này</p>
+                    <h3 id="stat-week" class="text-lg font-black text-green-400 mt-1">0 DCOIN</h3>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
+                    <p class="text-xs text-slate-400 font-semibold uppercase">Kiếm tháng này</p>
+                    <h3 id="stat-month" class="text-lg font-black text-blue-400 mt-1">0 DCOIN</h3>
+                </div>
+            </div>
+            <div class="bg-gradient-to-r from-yellow-600 to-amber-600 p-4 rounded-xl text-white shadow-lg flex justify-between items-center">
+                <div>
+                    <p class="text-xs opacity-90">Tổng link đã hoàn thành</p>
+                    <h2 id="stat-total-links" class="text-2xl font-black mt-1">0 Link</h2>
+                </div>
+                <i class="fa-solid fa-shield-halved text-4xl opacity-30"></i>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: NHIỆM VỤ ================= -->
+        <div id="tab-tasks" class="tab-content space-y-4">
+            <div class="bg-red-950/50 border border-red-500/50 p-3 rounded-xl text-xs space-y-1">
+                <p class="text-yellow-400 font-bold"><i class="fa-solid fa-shield-cat mr-1"></i> Anti-Cheat VIP đang bật!</p>
+                <p class="text-red-300">Tự động phát hiện Tool Bypass, Proxy, Auto Click. Vi phạm 3 lần sẽ **KHOÁ TÀI KHOẢN VĨNH VIỄN**!</p>
+            </div>
+
+            <!-- KHU VỰC NHẬP MÃ XÁC NHẬN -->
+            <div class="bg-slate-800 p-4 rounded-xl border border-yellow-500/50 space-y-3 shadow">
+                <h4 class="font-bold text-xs text-yellow-400 flex items-center gap-2">
+                    <i class="fa-solid fa-key"></i> NHẬP MÃ TOKEN SAU KHỦI VƯỢT LINK
+                </h4>
+                <div class="flex gap-2">
+                    <input type="text" id="verify-code-input" placeholder="VD: DC-X8921A" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-yellow-300 font-mono font-bold outline-none uppercase">
+                    <button onclick="submitVerifyCode()" class="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold px-4 rounded-lg text-xs">XÁC NHẬN</button>
+                </div>
+                <p class="text-[10px] text-slate-400">🔑 Mã xác nhận chỉ sử dụng được 1 lần và có thời hạn trong 15 phút.</p>
+            </div>
+
+            <!-- DANH SÁCH NHIỆM VỤ RÚT GỌN LINK -->
+            <div id="task-grid" class="space-y-3"></div>
+        </div>
+
+        <!-- ================= TAB 3: BẢNG XẾP HẠNG ================= -->
+        <div id="tab-leaderboard" class="tab-content space-y-3">
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
+                <h3 class="font-bold text-yellow-400 text-lg"><i class="fa-solid fa-trophy mr-2"></i>TOP VƯỢT LINK TUẦN</h3>
+                <p class="text-xs text-slate-400 mt-1">Trao giải tự động vào 00:00 Chủ Nhật</p>
+            </div>
+            <div id="leaderboard-list" class="space-y-2">
+                <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex justify-between items-center text-xs">
+                    <span class="font-bold text-yellow-400">#1 TopUser_01</span>
+                    <span class="text-slate-300 font-semibold">142 Links</span>
+                </div>
+                <div class="bg-slate-800 p-3 rounded-xl border border-slate-700 flex justify-between items-center text-xs">
+                    <span class="font-bold text-slate-300">#2 ProPlayer_99</span>
+                    <span class="text-slate-300 font-semibold">118 Links</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: RÚT TIỀN ================= -->
+        <div id="tab-withdraw" class="tab-content space-y-4">
+            <div class="bg-amber-950/40 border border-amber-500/30 p-3 rounded-xl text-xs text-amber-200">
+                📌 Duyệt rút tự động từ 08:00 - 22:00 hằng ngày. Tỉ lệ quy đổi: **1 DCOIN = 1 VNĐ**.
+            </div>
+
+            <!-- SUB-TABS RÚT TIỀN -->
+            <div class="flex bg-slate-800 p-1 rounded-xl border border-slate-700 text-xs font-bold">
+                <button onclick="switchWithdrawSubTab('bank')" id="subtab-bank-btn" class="flex-1 py-2 rounded-lg bg-yellow-500 text-slate-900">🏦 Ngân hàng</button>
+                <button onclick="switchWithdrawSubTab('card')" id="subtab-card-btn" class="flex-1 py-2 rounded-lg text-slate-400">📱 Thẻ Cào</button>
+                <button onclick="switchWithdrawSubTab('game')" id="subtab-game-btn" class="flex-1 py-2 rounded-lg text-slate-400">🎮 Nạp Game</button>
+            </div>
+
+            <!-- SUB-TAB 1: NGÂN HÀNG -->
+            <div id="subtab-bank" class="space-y-3">
+                <select id="bank-name" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white outline-none">
+                    <option value="">-- Chọn ngân hàng / ví --</option>
+                    <option value="MBBank">MBBank - Ngân hàng Quân Đội</option>
+                    <option value="Vietcombank">Vietcombank</option>
+                    <option value="Techcombank">Techcombank</option>
+                    <option value="MoMo">Ví MoMo</option>
+                    <option value="ZaloPay">Ví ZaloPay</option>
+                </select>
+                <input type="text" id="bank-holder" placeholder="HỌ VÀ TÊN CHỦ TÀI KHOẢN" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white uppercase outline-none">
+                <input type="number" id="bank-stk" placeholder="Số tài khoản / Số điện thoại ví" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white outline-none">
+                <input type="number" id="bank-amount" placeholder="Số DCOIN rút (Tối thiểu 10.000 DCOIN)" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white outline-none">
+                <button onclick="submitBankWithdraw()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 rounded-xl text-xs transition">RÚT VỀ NGÂN HÀNG</button>
+            </div>
+
+            <!-- SUB-TAB 2: THẺ CÀO -->
+            <div id="subtab-card" class="space-y-3 hidden">
+                <select id="card-prov" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white outline-none">
+                    <option value="Viettel">Viettel</option>
+                    <option value="Vinaphone">Vinaphone</option>
+                    <option value="Mobifone">Mobifone</option>
+                    <option value="Garena">Garena</option>
+                    <option value="Zing">Zing Card</option>
+                </select>
+                <input type="number" id="card-amount" placeholder="Mệnh giá đổi (Tối thiểu 10.000 DCOIN)" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white outline-none">
+                <button onclick="submitCardWithdraw()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 rounded-xl text-xs transition">ĐỔI THẺ CÀO</button>
+            </div>
+
+            <!-- SUB-TAB 3: NẠP GAME -->
+            <div id="subtab-game" class="space-y-3 hidden">
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="loadGamePackages('ff')" class="bg-slate-800 border border-slate-700 p-2 rounded-xl flex items-center gap-2 hover:border-yellow-500">
+                        <i class="fa-solid fa-fire text-orange-500 text-base"></i>
+                        <span class="text-xs font-bold">Free Fire</span>
+                    </button>
+                    <button onclick="loadGamePackages('lq')" class="bg-slate-800 border border-slate-700 p-2 rounded-xl flex items-center gap-2 hover:border-yellow-500">
+                        <i class="fa-solid fa-shield-halved text-blue-500 text-base"></i>
+                        <span class="text-xs font-bold">Liên Quân</span>
+                    </button>
+                    <button onclick="loadGamePackages('roblox')" class="bg-slate-800 border border-slate-700 p-2 rounded-xl flex items-center gap-2 hover:border-yellow-500">
+                        <i class="fa-solid fa-cube text-red-500 text-base"></i>
+                        <span class="text-xs font-bold text-red-400">Roblox</span>
+                    </button>
+                    <button onclick="loadGamePackages('fcm')" class="bg-slate-800 border border-slate-700 p-2 rounded-xl flex items-center gap-2 hover:border-yellow-500">
+                        <i class="fa-solid fa-futbol text-green-500 text-base"></i>
+                        <span class="text-xs font-bold">FC Mobile</span>
+                    </button>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-400 mb-1 block" id="game-id-label">🆔 <b>ID Game Người Nhận</b></label>
+                    <input type="text" id="game-user-id" placeholder="Nhập ID tài khoản Game" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-white outline-none">
+                </div>
+                <div id="game-package-list" class="space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 5: TÀI KHOẢN ================= -->
+        <div id="tab-account" class="tab-content space-y-4">
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-2">
+                <h3 class="font-bold text-sm text-yellow-400">Thông Tin Tài Khoản</h3>
+                <p class="text-xs"><b>Họ tên:</b> <span id="acc-name">...</span></p>
+                <p class="text-xs"><b>ID Telegram:</b> <span id="acc-id">...</span></p>
+            </div>
+            <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-3">
+                <h3 class="font-bold text-sm text-yellow-400">Lưu Thông Tin Ngân Hàng Nhanh</h3>
+                <input type="text" id="save-bank-holder" placeholder="Họ tên chủ tài khoản" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white uppercase outline-none">
+                <input type="number" id="save-bank-stk" placeholder="Số tài khoản / Ví MoMo" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white outline-none">
+                <button onclick="saveBankProfile()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg text-xs">LƯU TÀI KHOẢN</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- BOTTOM NAVBAR MENU -->
+    <div class="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700 flex justify-around p-2 z-40">
+        <button onclick="switchTab('home')" class="nav-btn text-yellow-400 flex flex-col items-center text-[10px]" id="nav-home"><i class="fa-solid fa-house text-base"></i>Trang chủ</button>
+        <button onclick="switchTab('tasks')" class="nav-btn text-slate-400 flex flex-col items-center text-[10px]" id="nav-tasks"><i class="fa-solid fa-list-check text-base"></i>Nhiệm vụ</button>
+        <button onclick="switchTab('leaderboard')" class="nav-btn text-slate-400 flex flex-col items-center text-[10px]" id="nav-leaderboard"><i class="fa-solid fa-ranking-star text-base"></i>BXH</button>
+        <button onclick="switchTab('withdraw')" class="nav-btn text-slate-400 flex flex-col items-center text-[10px]" id="nav-withdraw"><i class="fa-solid fa-wallet text-base"></i>Rút tiền</button>
+        <button onclick="switchTab('account')" class="nav-btn text-slate-400 flex flex-col items-center text-[10px]" id="nav-account"><i class="fa-solid fa-user text-base"></i>Tài khoản</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        const user = tg.initDataUnsafe.user || { id: 12345678, first_name: "Demo User" };
+        document.getElementById('user-name').innerText = user.first_name;
+        document.getElementById('user-id').innerText = user.id;
+        document.getElementById('acc-name').innerText = user.first_name;
+        document.getElementById('acc-id').innerText = user.id;
+
+        // DANH SÁCH CÁC NHIỆM VỤ RÚT GỌN LINK
+        const TASKS = [
+            { id: "link4m", name: "Link4M Task VIP", reward: 350, logo: "fa-bolt text-yellow-400" },
+            { id: "trafficvn", name: "TrafficVN Task VIP", reward: 300, logo: "fa-chart-line text-blue-400" },
+            { id: "layma", name: "LayMa Net Task VIP", reward: 400, logo: "fa-key text-red-400" },
+            { id: "yeutiepthi", name: "Yêu Tiếp Thị Task VIP", reward: 500, logo: "fa-star text-purple-400" }
+        ];
+
+        function renderTasks() {
+            const container = document.getElementById('task-grid');
+            container.innerHTML = '';
+            TASKS.forEach(t => {
+                container.innerHTML += `
+                    <div class="bg-slate-800 p-3.5 rounded-xl border border-slate-700 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid ${t.logo} text-xl"></i>
+                            <div>
+                                <h4 class="font-bold text-xs">${t.name}</h4>
+                                <span class="text-xs font-black text-yellow-400">+${t.reward} DCOIN</span>
+                            </div>
+                        </div>
+                        <button onclick="requestLink('${t.id}')" class="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold px-3 py-2 rounded-lg text-xs">
+                            LẤY LINK
+                        </button>
+                    </div>
+                `;
+            });
+        }
+        renderTasks();
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.replace('text-yellow-400', 'text-slate-400'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            document.getElementById('nav-' + tabId).classList.replace('text-slate-400', 'text-yellow-400');
+        }
+
+        function switchWithdrawSubTab(sub) {
+            ['bank', 'card', 'game'].forEach(s => {
+                document.getElementById('subtab-' + s).classList.add('hidden');
+                document.getElementById('subtab-' + s + '-btn').classList.replace('bg-yellow-500', 'text-slate-400');
+                document.getElementById('subtab-' + s + '-btn').classList.remove('text-slate-900');
+            });
+            document.getElementById('subtab-' + sub).classList.remove('hidden');
+            document.getElementById('subtab-' + sub + '-btn').classList.add('bg-yellow-500', 'text-slate-900');
+        }
+
+        // YÊU CẦU LẤY LINK NHIỆM VỤ
+        function requestLink(platformId) {
+            tg.sendData(JSON.stringify({
+                type: "request_task_link",
+                platform: platformId
+            }));
+            tg.showAlert("⏳ Đã tạo Link thành công! Vui lòng kiểm tra tin nhắn Telegram Bot.");
+        }
+
+        // GỬI MÃ TOKEN ĐỂ BÁO VỀ BOT XÁC NHẬN CỘNG TIỀN
+        function submitVerifyCode() {
+            const code = document.getElementById('verify-code-input').value.trim();
+            if (!code) {
+                tg.showAlert("⚠️ Vui lòng nhập Mã Token Xác Nhận!");
+                return;
+            }
+            tg.sendData(JSON.stringify({
+                type: "verify_task_code",
+                code: code
+            }));
+        }
+
+        // ĐỔI NHÃN ROBLOX KHI CHỌN NẠP GAME
+        let currentGameType = 'ff';
+        const GAME_PACKAGES = {
+            ff: [{ name: "25 Kim Cương", price: 5000 }, { name: "52 Kim Cương", price: 10000 }],
+            lq: [{ name: "20 Quân Huy", price: 10000 }, { name: "40 Quân Huy", price: 20000 }],
+            roblox: [{ name: "80 Robux", price: 25000 }, { name: "160 Robux", price: 50000 }, { name: "400 Robux", price: 120000 }],
+            fcm: [{ name: "40 FC Points", price: 10000 }]
+        };
+
+        function loadGamePackages(game) {
+            currentGameType = game;
+            const labelEl = document.getElementById('game-id-label');
+            const inputEl = document.getElementById('game-user-id');
+            
+            if (game === 'roblox') {
+                labelEl.innerHTML = '👤 <b>Tên Người Dùng Roblox (Username)</b>';
+                inputEl.placeholder = "Nhập Username Roblox (VD: RobloxPlayer123)";
+            } else {
+                labelEl.innerHTML = '🆔 <b>ID Game Người Nhận</b>';
+                inputEl.placeholder = "Nhập ID tài khoản Game";
+            }
+
+            const list = document.getElementById('game-package-list');
+            list.innerHTML = '';
+            (GAME_PACKAGES[game] || []).forEach(p => {
+                list.innerHTML += `
+                    <div class="bg-slate-800 p-2.5 rounded-lg border border-slate-700 flex justify-between items-center text-xs">
+                        <div><b>${p.name}</b><br><span class="text-yellow-400 font-bold">${p.price.toLocaleString()} DCOIN</span></div>
+                        <button onclick="submitGameWithdraw('${p.name}', ${p.price})" class="bg-yellow-500 text-slate-900 font-bold px-3 py-1.5 rounded-lg">ĐỔI GÓI</button>
+                    </div>
+                `;
+            });
+        }
+        loadGamePackages('ff');
+
+        function submitBankWithdraw() {
+            const bank = document.getElementById('bank-name').value;
+            const holder = document.getElementById('bank-holder').value.trim();
+            const stk = document.getElementById('bank-stk').value.trim();
+            const amount = parseInt(document.getElementById('bank-amount').value);
+            if (!bank || !holder || !stk || isNaN(amount) || amount < 10000) {
+                tg.showAlert("⚠️ Vui lòng điền ĐẦY ĐỦ THÔNG TIN và tối thiểu 10.000 DCOIN!");
+                return;
+            }
+            tg.sendData(JSON.stringify({ type: "withdraw_bank", bank, holder, stk, amount }));
+        }
+
+        function submitCardWithdraw() {
+            const prov = document.getElementById('card-prov').value;
+            const amount = parseInt(document.getElementById('card-amount').value);
+            if (isNaN(amount) || amount < 10000) {
+                tg.showAlert("⚠️ Tối thiểu 10.000 DCOIN!");
+                return;
+            }
+            tg.sendData(JSON.stringify({ type: "withdraw_card", provider: prov, amount }));
+        }
+
+        function submitGameWithdraw(pkgName, price) {
+            const gameUserId = document.getElementById('game-user-id').value.trim();
+            if (!gameUserId) {
+                const errorMsg = currentGameType === 'roblox' ? "⚠️ Bạn chưa nhập Username Roblox!" : "⚠️ Bạn chưa nhập ID Game!";
+                tg.showAlert(errorMsg);
+                return;
+            }
+            tg.sendData(JSON.stringify({
+                type: "withdraw_game",
+                game_type: currentGameType,
+                game_user_id: gameUserId,
+                pkg_name: pkgName,
+                price: price
+            }));
+        }
+
+        function saveBankProfile() {
+            const holder = document.getElementById('save-bank-holder').value.trim();
+            const stk = document.getElementById('save-bank-stk').value.trim();
+            if (!holder || !stk) { tg.showAlert("⚠️ Vui lòng điền đủ thông tin!"); return; }
+            tg.sendData(JSON.stringify({ type: "save_bank", holder, stk }));
+            tg.showAlert("✅ Đã lưu thông tin tài khoản!");
+        }
+    </script>
+</body>
+</html>

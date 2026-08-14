@@ -14,13 +14,14 @@ app = Flask(__name__)
 CORS(app)
 
 # =========================================================
-# 1. CẤU HÌNH BIẾN MÔI TRƯỜNG & DATABASE
+# 1. CẤU HÌNH THÔNG TIN (ĐIỀN TRỰC TIẾP HOẶC DÙNG RENDER ENV)
 # =========================================================
-MONGO_URL = "mongodb+srv://ducanhbuiok_db_user:ducanhbuiok_db_user@cluster0.a4zrytg.mongodb.net/?appName=Cluster0"
-BOT_TOKEN = "8116280112:AAERR6AH23JavjshO073QZmcDH7_qDEwdro"
-LINK4M_TOKEN = "6a69d21cd1f4b667a1055225"
-ADMIN_ID = "8914123780"               # ID Telegram Admin
-ADMIN_USERNAME = "daxprovn"
+MONGO_URL = os.getenv("MONGO_URL", "mongodb+srv://user:ducanhbuiok_db_user@cluster.mongodb.net/?retryWrites=true&w=majority")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8116280112:AAERR6AH23JavjshO073QZmcDH7_qDEwdro")
+LINK4M_TOKEN = os.getenv("LINK4M_TOKEN", "6a69d21cd1f4b667a1055225")
+
+ADMIN_ID = str(os.getenv("ADMIN_ID", "8914123780")).strip()
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "daxprovn").replace("@", "")
 
 URL_CHANNEL = os.getenv("URL_CHANNEL", "https://t.me/kenhthongbaodab_roblox")
 URL_GROUP = os.getenv("URL_GROUP", "https://t.me/nhomchatdanmmo")
@@ -32,19 +33,15 @@ users_col = db.users
 history_col = db.history      
 tasks_col = db.tasks          
 withdrawals_col = db.withdrawals 
-audit_logs_col = db.admin_audit_logs # Lưu lịch sử Admin bơm DCOIN
+audit_logs_col = db.admin_audit_logs
 
-MAX_TASKS_PER_DAY = 2         # Chuẩn 2 lượt/ngày theo Link4m
-MIN_TASK_TIME_SECONDS = 15     # Thời gian chờ tối thiểu 15s
+MAX_TASKS_PER_DAY = 2         # Giới hạn 2 lượt/ngày
+MIN_TASK_TIME_SECONDS = 15    # Thời gian chờ tối thiểu 15 giây
 
 # =========================================================
 # 2. XÁC THỰC BẢO MẬT HMAC-SHA256 CỦA TELEGRAM
 # =========================================================
 def verify_telegram_data(init_data_str):
-    """
-    Xác thực chuỗi initData từ Telegram WebApp SDK gửi lên server.
-    Chống giả mạo user_id 100%.
-    """
     if not init_data_str or not BOT_TOKEN:
         return None
     try:
@@ -53,18 +50,14 @@ def verify_telegram_data(init_data_str):
             return None
         
         received_hash = parsed_data.pop('hash')
-        
-        # Sắp xếp tham số theo alphabet
         data_check_arr = [f"{k}={v}" for k, v in sorted(parsed_data.items())]
         data_check_string = "\n".join(data_check_arr)
 
-        # Tạo HMAC secret key từ Bot Token
         secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode('utf-8'), hashlib.sha256).digest()
         calculated_hash = hmac.new(secret_key, data_check_string.encode('utf-8'), hashlib.sha256).hexdigest()
 
         if calculated_hash == received_hash:
-            user_info = json.loads(parsed_data.get('user', '{}'))
-            return user_info
+            return json.loads(parsed_data.get('user', '{}'))
         return None
     except Exception as e:
         print("Lỗi xác thực HMAC Telegram:", e)
@@ -162,7 +155,7 @@ def webhook():
     return "ok", 200
 
 # =========================================================
-# 4. API DÀNH CHO USER (AUTHENTICATED)
+# 4. API DÀNH CHO USER
 # =========================================================
 @app.route('/api/user', methods=['POST'])
 def get_user():
@@ -170,10 +163,8 @@ def get_user():
         data = request.json or {}
         init_data = data.get('init_data', '')
         
-        # Xác thực với Telegram
         tg_user = verify_telegram_data(init_data)
         if not tg_user:
-            # Fallback nếu test local (dev mode)
             uid = str(data.get('user_id', '')).strip()
             display_name = data.get('display_name', 'Người dùng')
             username = data.get('username', '')
@@ -201,8 +192,7 @@ def get_user():
             "username": username,
             "balance": user.get("balance", 0),
             "ref_count": user.get("ref_count", 0),
-            "is_admin": is_admin,
-            "admin_username": ADMIN_USERNAME
+            "is_admin": is_admin
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -312,7 +302,6 @@ def withdraw():
         if not user or user.get("balance", 0) < amount:
             return jsonify({"success": False, "msg": "Số dư DCOIN của bạn không đủ!"})
 
-        # Trừ tiền tạm khóa
         users_col.update_one({"uid": uid}, {"$inc": {"balance": -amount}})
         req_id = secrets.token_hex(4)
 
@@ -326,7 +315,7 @@ def withdraw():
             "account_number": account_number,
             "account_name": account_name,
             "bank_name": bank_name,
-            "status": "pending",           # pending, approved, completed, rejected_refund, rejected_penalty
+            "status": "pending",
             "reason": "",
             "date": datetime.now().strftime("%d/%m/%Y %H:%M")
         })
@@ -340,7 +329,6 @@ def withdraw():
 
 @app.route('/api/user/withdrawals', methods=['POST'])
 def get_user_withdrawals():
-    """Lấy lịch sử rút tiền của người dùng kèm chi tiết trạng thái & lý do"""
     try:
         data = request.json or {}
         uid = str(data.get('user_id', '')).strip()
@@ -353,7 +341,6 @@ def get_user_withdrawals():
 
 @app.route('/api/leaderboard', methods=['POST'])
 def get_leaderboard():
-    """Bảng xếp hạng Top 20 tài khoản nhiều DCOIN nhất"""
     try:
         top_users = list(users_col.find({}, {"_id": 0, "uid": 1, "display_name": 1, "username": 1, "balance": 1}).sort("balance", -1).limit(20))
         return jsonify({"success": True, "data": top_users})
@@ -361,7 +348,7 @@ def get_leaderboard():
         return jsonify({"success": False, "data": []}), 500
 
 # =========================================================
-# 5. CÁC API CẢI TIẾN CHUYÊN DỤNG CHO ADMIN
+# 5. API DÀNH CHO ADMIN
 # =========================================================
 @app.route('/api/admin/withdrawals', methods=['POST'])
 def admin_get_withdrawals():
@@ -378,14 +365,6 @@ def admin_get_withdrawals():
 
 @app.route('/api/admin/action-withdraw', methods=['POST'])
 def admin_action_withdraw():
-    """
-    Xử lý đơn rút tiền chuẩn 5 nút bấm từ Admin Panel:
-    - approve: Duyệt đơn (Đang chuyển tiền)
-    - complete: Hoàn thành (Tiền đã gửi thành công)
-    - reject_refund: Hoàn lại (Từ chối + Hoàn tiền lại ví user)
-    - reject_penalty: Hủy do vi phạm (Từ chối + Không hoàn tiền)
-    - undo_approve: Hủy duyệt (Đưa về trạng thái Chờ duyệt)
-    """
     try:
         data = request.json or {}
         admin_id = str(data.get('admin_id', '')).strip()
@@ -405,28 +384,28 @@ def admin_action_withdraw():
         if action == "approve":
             withdrawals_col.update_one({"req_id": req_id}, {"$set": {"status": "approved"}})
             send_telegram_msg(uid, f"🔵 **ĐƠN RÚT TIỀN ĐÃ ĐƯỢC DUYỆT!**\n\nĐơn rút **{amount:,} DCOIN** của bạn đã được duyệt và đang trong quá trình chuyển tiền.")
-            return jsonify({"success": True, "msg": "Đã chuyển trạng thái sang [ĐÃ DUYỆT / ĐANG CHUYỂN TIỀN]"})
+            return jsonify({"success": True, "msg": "Đã chuyển sang trạng thái [ĐÃ DUYỆT]"})
 
         elif action == "complete":
             withdrawals_col.update_one({"req_id": req_id}, {"$set": {"status": "completed"}})
             send_telegram_msg(uid, f"🟢 **RÚT TIỀN HOÀN THÀNH!**\n\nTiền cho đơn rút **{amount:,} DCOIN** đã được chuyển thành công tới tài khoản của bạn!")
-            return jsonify({"success": True, "msg": "Đã chuyển trạng thái sang [HOÀN THÀNH]"})
+            return jsonify({"success": True, "msg": "Đã chuyển sang trạng thái [HOÀN THÀNH]"})
 
         elif action == "reject_refund":
             withdrawals_col.update_one({"req_id": req_id}, {"$set": {"status": "rejected_refund", "reason": reason}})
             users_col.update_one({"uid": uid}, {"$inc": {"balance": amount}})
             send_telegram_msg(uid, f"🟣 **ĐƠN RÚT TIỀN BỊ TỪ CHỐI (ĐÃ HOÀN TIỀN)**\n\nLý do: `{reason or 'Không có'}`\nSố DCOIN **{amount:,}** đã được hoàn lại về ví của bạn.")
-            return jsonify({"success": True, "msg": "Đã HOÀN TIỀN lại ví và chuyển đơn sang [ĐÃ HỦY - HOÀN TIỀN]"})
+            return jsonify({"success": True, "msg": "Đã HOÀN TIỀN lại ví user!"})
 
         elif action == "reject_penalty":
             withdrawals_col.update_one({"req_id": req_id}, {"$set": {"status": "rejected_penalty", "reason": reason}})
             send_telegram_msg(uid, f"🔴 **ĐƠN RÚT TIỀN BỊ HỦY DO VI PHẠM!**\n\nLý do: `{reason or 'Vi phạm quy định hệ thống'}`\nSố DCOIN cho đơn rút này bị tịch thu.")
-            return jsonify({"success": True, "msg": "Đã HỦY ĐƠN (Phạt không hoàn tiền) thành công!"})
+            return jsonify({"success": True, "msg": "Đã HỦY ĐƠN (Không hoàn tiền) thành công!"})
 
         elif action == "undo_approve":
             withdrawals_col.update_one({"req_id": req_id}, {"$set": {"status": "pending"}})
-            send_telegram_msg(uid, f"🟡 **CẬP NHẬT TRẠNG THÁI RÚT TIỀN**\n\nĐơn rút **{amount:,} DCOIN** của bạn đã được trả về trạng thái [Đang chờ duyệt].")
-            return jsonify({"success": True, "msg": "Đã khôi phục đơn về trạng thái [CHỜ DUYỆT]"})
+            send_telegram_msg(uid, f"🟡 **CẬP NHẬT TRẠNG THÁI RÚT TIỀN**\n\nĐơn rút **{amount:,} DCOIN** của bạn đã trả về trạng thái [Đang chờ duyệt].")
+            return jsonify({"success": True, "msg": "Đã khôi phục đơn về [CHỜ DUYỆT]"})
 
         return jsonify({"success": False, "msg": "Hành động không hợp lệ!"})
     except Exception as e:
@@ -434,28 +413,24 @@ def admin_action_withdraw():
 
 @app.route('/api/admin/inject-dcoin', methods=['POST'])
 def admin_inject_dcoin():
-    """Admin bơm/chuyển DCOIN trực tiếp cho tài khoản qua ID Telegram kèm Ghi chú"""
     try:
         data = request.json or {}
         admin_id = str(data.get('admin_id', '')).strip()
         target_uid = str(data.get('target_uid', '')).strip()
         amount = int(data.get('amount', 0))
         note = data.get('note', 'Nạp tiền từ Admin').strip()
-        
+
         if admin_id != ADMIN_ID or not ADMIN_ID:
             return jsonify({"success": False, "msg": "Bạn không có quyền Admin!"}), 403
 
         if not target_uid or amount <= 0:
-            return jsonify({"success": False, "msg": "Thiếu Telegram ID người nhận hoặc số DCOIN không hợp lệ!"})
+            return jsonify({"success": False, "msg": "Thiếu Telegram ID hoặc số DCOIN không hợp lệ!"})
 
         target_user = users_col.find_one({"uid": target_uid})
         if not target_user:
             return jsonify({"success": False, "msg": "Tài khoản Telegram ID này chưa từng mở Mini App!"})
 
-        # Cộng DCOIN
         users_col.update_one({"uid": target_uid}, {"$inc": {"balance": amount}})
-
-        # Lưu Log Audit Kiểm toán
         audit_logs_col.insert_one({
             "admin_id": admin_id,
             "target_uid": target_uid,
@@ -465,7 +440,6 @@ def admin_inject_dcoin():
             "date": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         })
 
-        # Báo cho User
         send_telegram_msg(target_uid, f"🎁 **BẠN VỪA NHẬN ĐƯỢC DCOIN TỪ ADMIN!**\n\n💰 Số lượng: **+{amount:,} DCOIN**\n📌 Nội dung: `{note}`")
 
         return jsonify({"success": True, "msg": f"Đã chuyển thành công +{amount:,} DCOIN cho User {target_uid}!"})

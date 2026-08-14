@@ -276,7 +276,7 @@ def telegram_webhook(update: dict):
                             {"text": "💬 Nhóm Chat MMO", "https://t.me/nhomchatdanmmo"}
                         ],
                         [
-                            {"text": "🚀 MỞ MINI APP KIẾM DCOIN", "web_app": {"url": "https://your-app.vercel.app"}}
+                            {"text": "🚀 MỞ MINI APP KIẾM DCOIN", "web_app": {"url": "https://vuotlinkkiemtien.vercel.app/"}}
                         ]
                     ]
                 }

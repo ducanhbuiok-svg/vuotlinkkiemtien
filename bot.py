@@ -16,9 +16,9 @@ from pydantic import BaseModel
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# ==================== CẤU HÌNH HỆ THỐNG ====================
-BOT_TOKEN = "8116280112:AAERR6AH23JavjshO073QZmcDH7_qDEwdro"
-ADMIN_ID = 8914123780  # ⚠️ Thay ID Telegram số của Admin vào đây
+# ==================== CẤU HÌNH QUAN TRỌNG (ĐIỀN ĐÚNG 2 MỤC NÀY) ====================
+BOT_TOKEN = "8116280112:AAERR6AH23JavjshO073QZmcDH7_qDEwdro"  # ⚠️ Lấy từ @BotFather (ví dụ: "7123456789:AAFg...")
+ADMIN_ID = 8914123780                          # ⚠️ Thay ID Telegram dạng số của bạn (dùng @userinfobot để lấy)
 WEBAPP_URL = "https://vuotlinkkiemtien.vercel.app"
 
 # ==================== CƠ SỞ DỮ LIỆU SQLITE ====================
@@ -27,7 +27,7 @@ DB_NAME = "database.db"
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    # Bảng người dùng
+    # Bảng lưu thông tin user & số dư
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
@@ -38,7 +38,7 @@ def init_db():
             created_at TEXT
         )
     ''')
-    # Bảng lịch sử rút tiền
+    # Bảng lịch sử yêu cầu rút tiền
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS withdrawals (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,12 +52,9 @@ def init_db():
     conn.commit()
     conn.close()
 
-init_db()
-
 # ==================== ANTI-CHEAT: XÁC THỰC HMAC TELEGRAM ====================
 def verify_telegram_init_data(init_data: str) -> dict:
-    """Xác thực chữ ký HMAC-SHA256 từ Telegram SDK.
-    Bảo vệ 100% khỏi DevTools / Postman / Fake Request."""
+    """Xác thực chữ ký bảo mật từ Telegram WebApp SDK."""
     try:
         parsed_data = dict(urllib.parse.parse_qsl(init_data, keep_blank_values=True))
         if "hash" not in parsed_data:
@@ -75,8 +72,8 @@ def verify_telegram_init_data(init_data: str) -> dict:
     except Exception:
         return None
 
-# ==================== FASTAPI WEB SERVER ====================
-app = FastAPI(title="DCOIN Backend API")
+# ==================== FASTAPI WEB SERVER (CHO RENDER & MINI APP) ====================
+app = FastAPI(title="DCOIN Backend System")
 
 app.add_middleware(
     CORSMiddleware,
@@ -92,12 +89,12 @@ class WithdrawRequest(BaseModel):
 
 @app.get("/")
 def health_check():
-    return {"status": "online", "system": "DCOIN VIP Engine"}
+    return {"status": "online", "message": "DCOIN Backend Server Running"}
 
 @app.post("/api/user-info")
 def get_user_info(x_tg_data: str = Header(None)):
     if not x_tg_data:
-        raise HTTPException(status_code=401, detail="Missing Authentication Header")
+        raise HTTPException(status_code=401, detail="Missing Telegram Data")
     
     tg_user = verify_telegram_init_data(x_tg_data)
     if not tg_user:
@@ -139,12 +136,12 @@ def request_withdraw(req: WithdrawRequest, x_tg_data: str = Header(None)):
     
     tg_user = verify_telegram_init_data(x_tg_data)
     if not tg_user:
-        raise HTTPException(status_code=401, detail="Anti-Cheat: Auth Failed")
+        raise HTTPException(status_code=401, detail="Anti-Cheat Auth Failed")
     
     user_id = tg_user['id']
     amount = req.amount
     
-    if amount < 10000:  # Hạn mức tối thiểu 10,000 DCOIN
+    if amount < 10000:
         return {"success": False, "message": "Số dư rút tối thiểu là 10,000 DCOIN!"}
         
     conn = sqlite3.connect(DB_NAME)
@@ -156,7 +153,7 @@ def request_withdraw(req: WithdrawRequest, x_tg_data: str = Header(None)):
         conn.close()
         return {"success": False, "message": "Số dư không đủ!"}
     
-    # Trừ tiền & tạo lệnh rút
+    # Trừ tiền & tạo đơn rút
     new_balance = row[0] - amount
     cursor.execute("UPDATE users SET balance = ? WHERE user_id = ?", (new_balance, user_id))
     cursor.execute(
@@ -167,7 +164,7 @@ def request_withdraw(req: WithdrawRequest, x_tg_data: str = Header(None)):
     conn.commit()
     conn.close()
     
-    # Bắn thông báo trực tiếp về Telegram cho ADMIN
+    # Bắn thông báo về Telegram cho Admin
     asyncio.run_coroutine_threadsafe(
         send_admin_withdraw_notification(withdraw_id, user_id, tg_user.get('first_name', ''), amount, req.wallet_info),
         bot_loop
@@ -185,7 +182,7 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("🚀 Mở DCOIN App VIP", web_app={"url": WEBAPP_URL})
     ]])
     await update.message.reply_text(
-        f"👋 Chào mừng **{user.first_name}** đến với DCOIN System!\n\nBấm nút bên dưới để bắt đầu làm nhiệm vụ và rút tiền nhé.",
+        f"👋 Chào mừng **{user.first_name}** đến với DCOIN System!\n\nBấm nút bên dưới để mở Mini App nhé.",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -206,7 +203,7 @@ async def send_admin_withdraw_notification(w_id, user_id, name, amount, wallet):
     try:
         await bot_app.bot.send_message(chat_id=ADMIN_ID, text=text, reply_markup=kb, parse_mode="Markdown")
     except Exception as e:
-        print(f"Error sending admin alert: {e}")
+        print(f"Lỗi gửi tin nhắn cho Admin: {e}")
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -220,22 +217,22 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if action == "app":
         cursor.execute("UPDATE withdrawals SET status = 'APPROVED' WHERE id = ?", (w_id,))
         conn.commit()
-        await query.edit_message_text(f"{query.message.text}\n\n STATUS: **ĐÃ DUYỆT ✅**", parse_mode="Markdown")
-        await bot_app.bot.send_message(chat_id=int(user_id), text=f"🎉 Lệnh rút {amount:,.0f} DCOIN của bạn đã được duyệt!")
+        await query.edit_message_text(f"{query.message.text}\n\nTRẠNG THÁI: **ĐÃ DUYỆT ✅**", parse_mode="Markdown")
+        await bot_app.bot.send_message(chat_id=int(user_id), text=f"🎉 Lệnh rút {amount:,.0f} DCOIN của bạn đã được duyệt thành công!")
     elif action == "rej":
         # Hoàn tiền lại cho user
         cursor.execute("UPDATE withdrawals SET status = 'REJECTED' WHERE id = ?", (w_id,))
         cursor.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (amount, user_id))
         conn.commit()
-        await query.edit_message_text(f"{query.message.text}\n\n STATUS: **ĐÃ TỪ CHỐI ❌ (Đã hoàn xu)**", parse_mode="Markdown")
-        await bot_app.bot.send_message(chat_id=int(user_id), text=f"❌ Lệnh rút {amount:,.0f} DCOIN bị từ chối. Xu đã được hoàn về tài khoản.")
+        await query.edit_message_text(f"{query.message.text}\n\nTRẠNG THÁI: **ĐÃ TỪ CHỐI ❌ (Đã hoàn xu)**", parse_mode="Markdown")
+        await bot_app.bot.send_message(chat_id=int(user_id), text=f"❌ Lệnh rút {amount:,.0f} DCOIN bị từ chối. Xu đã được hoàn lại.")
         
     conn.close()
 
 bot_app.add_handler(CommandHandler("start", start_cmd))
 bot_app.add_handler(CallbackQueryHandler(handle_callback))
 
-# ==================== KHỞI CHẠY KHÔNG DỪNG (RENDER SAFE) ====================
+# ==================== KHỞI CHẠY (RENDER SAFE) ====================
 def run_fastapi():
     port = int(os.environ.get("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)
@@ -243,10 +240,11 @@ def run_fastapi():
 if __name__ == "__main__":
     init_db()
     
-    # Chạy FastAPI ở Thread riêng
+    # Chạy Web Server FastAPI ở Thread riêng để Render nhận diện Web Service Free
     threading.Thread(target=run_fastapi, daemon=True).start()
     
     # Chạy Telegram Bot ở Main Thread
     bot_loop = asyncio.get_event_loop()
     print("🚀 DCOIN Engine VIP System Online!")
     bot_app.run_polling()
+    

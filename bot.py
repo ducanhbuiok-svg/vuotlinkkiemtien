@@ -17,8 +17,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # ==================== CẤU HÌNH HỆ THỐNG ====================
-BOT_TOKEN = "THAY_TOKEN_BOT_CỦA_BẠN_VÀO_ĐÂY"
-ADMIN_ID = 123456789  # ⚠️ Thay ID Telegram số của Admin vào đây
+BOT_TOKEN = "8116280112:AAERR6AH23JavjshO073QZmcDH7_qDEwdro"
+ADMIN_ID = 8914123780  # ⚠️ Thay ID Telegram số của Admin vào đây
 WEBAPP_URL = "https://vuotlinkkiemtien.vercel.app"
 
 # ==================== CƠ SỞ DỮ LIỆU SQLITE ====================

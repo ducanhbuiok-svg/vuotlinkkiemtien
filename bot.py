@@ -16,11 +16,11 @@ CORS(app)
 # =========================================================
 # 1. CẤU HÌNH BIẾN MÔI TRƯỜNG & DATABASE
 # =========================================================
-MONGO_URL = os.getenv("mongodb+srv://ducanhbuiok_db_user:ducanhbuiok_db_user@cluster0.a4zrytg.mongodb.net/?appName=Cluster0")
-BOT_TOKEN = os.getenv("8116280112:AAERR6AH23JavjshO073QZmcDH7_qDEwdro")
-LINK4M_TOKEN = os.getenv("LINK4M_TOKEN", "6a69d21cd1f4b667a1055225")
-ADMIN_ID = str(os.getenv("ADMIN_ID", "8914123780")).strip()               # ID Telegram Admin
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin").replace("@daxprovn", "")
+MONGO_URL = "mongodb+srv://ducanhbuiok_db_user:ducanhbuiok_db_user@cluster0.a4zrytg.mongodb.net/?appName=Cluster0"
+BOT_TOKEN = "8116280112:AAERR6AH23JavjshO073QZmcDH7_qDEwdro"
+LINK4M_TOKEN = "6a69d21cd1f4b667a1055225"
+ADMIN_ID = "8914123780"               # ID Telegram Admin
+ADMIN_USERNAME = "daxprovn"
 
 URL_CHANNEL = os.getenv("URL_CHANNEL", "https://t.me/kenhthongbaodab_roblox")
 URL_GROUP = os.getenv("URL_GROUP", "https://t.me/nhomchatdanmmo")
@@ -35,7 +35,7 @@ withdrawals_col = db.withdrawals
 audit_logs_col = db.admin_audit_logs # Lưu lịch sử Admin bơm DCOIN
 
 MAX_TASKS_PER_DAY = 2         # Chuẩn 2 lượt/ngày theo Link4m
-MIN_TASK_TIME_SECONDS = 5     # Thời gian chờ tối thiểu 15s
+MIN_TASK_TIME_SECONDS = 15     # Thời gian chờ tối thiểu 15s
 
 # =========================================================
 # 2. XÁC THỰC BẢO MẬT HMAC-SHA256 CỦA TELEGRAM
@@ -153,7 +153,7 @@ def webhook():
                         {"text": "🆘 Liên hệ Admin Support", "url": f"https://t.me/{ADMIN_USERNAME}"}
                     ],
                     [
-                        {"text": "🚀 MỞ MINI APP KIẾM DCOIN", "web_app": {"url": "https://dcoin-app.vercel.app"}}
+                        {"text": "🚀 MỞ MINI APP KIẾM DCOIN", "web_app": {"url": "https://vuotlinkkiemtien.vercel.app/"}}
                     ]
                 ]
             }

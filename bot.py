@@ -1,3 +1,12 @@
+import os, threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class Health(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+
+threading.Thread(target=lambda: HTTPServer(('0.0.0.0', int(os.environ.get('PORT', 8080))), Health).serve_forever(), daemon=True).start()
 import sqlite3
 import json
 import logging

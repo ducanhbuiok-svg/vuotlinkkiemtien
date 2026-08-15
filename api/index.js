@@ -284,5 +284,8 @@ app.post('/api/admin/toggle-ban', checkAdmin, (req, res) => {
     const statusText = db.users[targetUserId].isBanned === 1 ? 'Khóa' : 'Mở khóa';
     res.json({ success: true, message: `Đã ${statusText} tài khoản ${targetUserId}!` });
 });
-
+// Thêm đoạn này để trang chủ hiện thông báo Server sống
+app.get('/', (req, res) => {
+    res.send("Server Bot Vercel đang chạy ngon lành!");
+});
 module.exports = app;

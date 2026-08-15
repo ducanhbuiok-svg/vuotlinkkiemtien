@@ -2,630 +2,437 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini App Dcoin Premium</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DCOIN Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
         :root {
-            --primary: #6c5ce7;
-            --secondary: #a29bfe;
-            --bg: #0f0f1b;
-            --card-bg: #1e1e30;
-            --accent: #00b894;
-            --danger: #ff7675;
-            --text: #ffffff;
-            --subtext: #a0a0b0;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #38bdf8;
+            --text: #f8fafc;
+            --subtext: #94a3b8;
+            --success: #22c55e;
+            --danger: #ef4444;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--bg); color: var(--text); padding-bottom: 70px; user-select: none; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding-bottom: 70px; }
 
-        /* BANNED SCREEN */
-        #banned-screen {
-            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #111; z-index: 99999; flex-direction: column; align-items: center;
-            justify-content: center; padding: 20px; text-align: center; color: var(--danger);
-        }
+        .header { background: var(--card-bg); padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .avatar { width: 35px; height: 35px; border-radius: 50%; background: var(--accent); color: #000; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .balance { background: #0284c7; padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; }
 
-        /* HEADER & DASHBOARD AI */
-        .header { background: linear-gradient(135deg, #6c5ce7, #341f97); padding: 20px; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; text-align: center; }
-        .user-profile { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-        .avatar { width: 55px; height: 55px; border-radius: 50%; border: 2px solid #fff; }
-        .balance-box { background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); padding: 15px; border-radius: 15px; font-size: 22px; font-weight: bold; color: #ffeaa7; }
+        .nav-tabs { display: flex; background: var(--card-bg); border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 10; }
+        .tab-btn { flex: 1; padding: 12px; text-align: center; color: var(--subtext); border: none; background: none; font-weight: bold; font-size: 12px; cursor: pointer; }
+        .tab-btn.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
 
-        /* NAVIGATION BAR */
-        .navbar { position: fixed; bottom: 0; width: 100%; background: #181828; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #2d2d44; z-index: 1000; }
-        .nav-item { color: var(--subtext); text-decoration: none; font-size: 11px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
-        .nav-item.active { color: var(--primary); font-weight: bold; }
-        .nav-item i { font-size: 18px; }
+        .tab-content { display: none; padding: 15px; }
+        .tab-content.active { display: block; }
 
-        /* TAB PAGES */
-        .page { display: none; padding: 15px; }
-        .page.active { display: block; }
+        .task-card, .item-card { background: var(--card-bg); border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #334155; }
+        .card-left { display: flex; align-items: center; gap: 12px; }
+        .card-icon { width: 40px; height: 40px; border-radius: 8px; }
 
-        /* TASK ITEMS & BADGES */
-        .task-card { background: var(--card-bg); border-radius: 15px; padding: 15px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; position: relative; border: 1px solid #2d2d44; }
-        .task-badge { position: absolute; top: 10px; right: 10px; background: #2d2d44; color: var(--accent); padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }
-        .task-badge.locked { color: var(--danger); background: #3d2222; }
-        .task-img { width: 45px; height: 45px; border-radius: 10px; object-fit: cover; }
-
-        /* BUTTONS & INPUTS */
-        .btn { background: var(--primary); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn { padding: 8px 14px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .btn-primary { background: var(--accent); color: #0f172a; }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-danger { background: var(--danger); color: #fff; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-danger { background: var(--danger); }
-        .btn-success { background: var(--accent); }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 12px; color: var(--subtext); margin-bottom: 5px; }
-        .form-control { width: 100%; padding: 12px; background: #121221; border: 1px solid #33334d; border-radius: 8px; color: #fff; outline: none; }
 
-        /* MODAL */
-        .modal { display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; }
-        .modal-content { background: var(--card-bg); width: 90%; max-width: 400px; padding: 20px; border-radius: 15px; text-align: center; }
+        .form-control { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; margin-bottom: 10px; font-size: 14px; }
 
-        /* FLOATING SUPPORT BUTTON */
-        .float-support { position: fixed; bottom: 75px; right: 15px; width: 45px; height: 45px; background: #0088cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 999; }
+        /* Modal Popup */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--card-bg); border-radius: 12px; padding: 20px; width: 100%; max-width: 400px; border: 1px solid #334155; }
 
-        /* TABLES & LISTS */
         table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #2d2d44; }
-        th { background: #121221; color: var(--subtext); }
-        
-        .status-CHO_DUYET { color: #f1c40f; }
-        .status-HOAN_THANH { color: #2ecc71; }
-        .status-DA_DUYET { color: #3498db; }
-        .status-GIAN_LAN_THU_HOI { color: #e74c3c; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #334155; }
+        th { color: var(--subtext); }
     </style>
 </head>
 <body>
 
-    <!-- SCREEN BAN -->
-    <div id="banned-screen">
-        <i class="fa-solid fa-ban fa-4x"></i>
-        <h2 style="margin-top: 15px;">TÀI KHOẢN ĐÃ BỊ KHÓA</h2>
-        <p id="ban-reason-text" style="margin-top: 10px; color: #aaa;"></p>
-    </div>
-
-    <!-- HEADER / AI DASHBOARD -->
     <div class="header">
-        <div class="user-profile">
-            <img id="user-avatar" class="avatar" src="" alt="Avatar">
-            <div style="text-align: left;">
-                <h3 id="user-name">Đang tải...</h3>
-                <small id="user-id" style="color: var(--secondary);">ID: -</small>
+        <div class="user-info">
+            <div class="avatar" id="u-avatar">U</div>
+            <div>
+                <div id="u-name" style="font-weight: bold; font-size: 14px;">User</div>
+                <div id="u-id" style="font-size: 10px; color: var(--subtext);">ID: ...</div>
             </div>
         </div>
-        <div class="balance-box">
-            <i class="fa-solid fa-coins"></i> <span id="user-dcoin">0</span> DCOIN
-        </div>
+        <div class="balance"><i class="fa-solid fa-coins"></i> <span id="u-dcoin">0</span> DCOIN</div>
     </div>
 
-    <!-- APP PAGES -->
-    
-    <!-- PAGE 1: TRANG CHỦ & AI STATS -->
-    <div id="page-home" class="page active">
-        <h4 style="margin-bottom: 10px;"><i class="fa-solid fa-robot"></i> Trí Tuệ Nhân Tạo AI Thống Kê</h4>
-        <div style="background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-            <canvas id="aiChart" style="max-height: 180px;"></canvas>
-        </div>
-        <div style="background: var(--card-bg); padding: 15px; border-radius: 12px;">
-            <p style="font-size: 13px; color: #48dbfb;"><i class="fa-solid fa-lightbulb"></i> <b>AI Phân Tích:</b> Bạn hoạt động tích cực nhất vào buổi tối. Hoàn thành 100% nhiệm vụ hôm nay sẽ nhận thêm cơ hội lọt Top BXH Tuần!</p>
-        </div>
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('tasks')"><i class="fa-solid fa-list-check"></i> Nhiệm Vụ</button>
+        <button class="tab-btn" onclick="switchTab('withdraw')"><i class="fa-solid fa-wallet"></i> Rút Tiền</button>
+        <button class="tab-btn" onclick="switchTab('history')"><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử</button>
+        <button class="tab-btn" onclick="switchTab('top')"><i class="fa-solid fa-trophy"></i> BXH</button>
+        <button class="tab-btn" onclick="switchTab('admin')"><i class="fa-solid fa-user-shield"></i> Admin</button>
     </div>
 
-    <!-- PAGE 2: NHIỆM VỤ LINK RÚT GỌN -->
-    <div id="page-tasks" class="page">
-        <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-link"></i> Danh Sách Nhiệm Vụ Rút Gọn Link</h4>
-        <div id="tasks-container"></div>
+    <!-- TAB NHIỆM VỤ -->
+    <div id="tab-tasks" class="tab-content active">
+        <h4 style="margin-bottom: 10px;">Nhiệm Vụ Rút Gọn Link Hôm Nay</h4>
+        <div id="tasks-list"></div>
     </div>
 
-    <!-- PAGE 3: BẢNG XẾP HẠNG -->
-    <div id="page-leaderboard" class="page">
-        <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-trophy"></i> Bảng Xếp Hạng Tuần</h4>
-        <div style="background: var(--card-bg); border-radius: 12px; overflow: hidden;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Hạng</th>
-                        <th>Thành viên</th>
-                        <th>Link vượt</th>
-                    </tr>
-                </thead>
-                <tbody id="leaderboard-body"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- PAGE 4: RÚT TIỀN -->
-    <div id="page-withdraw" class="page">
-        <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-wallet"></i> Rút Tiền Về Ví / Ngân Hàng</h4>
-        <div style="background: var(--card-bg); padding: 15px; border-radius: 12px;">
-            <div class="form-group">
-                <label>Hình thức thanh toán</label>
-                <select id="wd-method" class="form-control" onchange="renderWithdrawFields()">
-                    <option value="MOMO">Ví MoMo</option>
-                    <option value="ZALOPAY">Ví ZaloPay</option>
-                    <option value="BANK">Ngân Hàng (ATM)</option>
-                    <option value="THECAO">Thẻ Cào Điện Thoại</option>
-                </select>
+    <!-- TAB RÚT TIỀN -->
+    <div id="tab-withdraw" class="tab-content">
+        <h4 style="margin-bottom: 10px;">Đổi Thưởng / Rút Tiền</h4>
+        <div class="item-card">
+            <div class="card-left">
+                <i class="fa-solid fa-building-columns fa-2x" style="color: var(--accent);"></i>
+                <div>
+                    <b>Ngân Hàng (ATM / MOMO)</b>
+                    <div style="font-size: 11px; color: var(--subtext);">Tỉ lệ: 1,000 DCOIN = 1,000 VNĐ</div>
+                </div>
             </div>
-            <div id="wd-dynamic-fields"></div>
-            <div class="form-group">
-                <label>Số DCOIN muốn rút</label>
-                <input type="number" id="wd-amount" class="form-control" placeholder="VD: 50000">
+            <button class="btn btn-primary" onclick="openWithdrawModal('Bank / Momo')">Rút</button>
+        </div>
+        <div class="item-card">
+            <div class="card-left">
+                <i class="fa-solid fa-gamepad fa-2x" style="color: var(--success);"></i>
+                <div>
+                    <b>Nạp Thẻ Game / Phone</b>
+                    <div style="font-size: 11px; color: var(--subtext);">Garena, Viettel, Zing...</div>
+                </div>
             </div>
-            <button class="btn btn-success" style="width: 100%; margin-top: 10px;" onclick="submitWithdraw('Rút Tiền')">Gửi Yêu Cầu Rút Tiền</button>
+            <button class="btn btn-primary" onclick="openWithdrawModal('Thẻ Game / ĐT')">Đổi</button>
         </div>
     </div>
 
-    <!-- PAGE 5: NẠP GAME -->
-    <div id="page-shop" class="page">
-        <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-gamepad"></i> Đổi DCOIN Nạp Game</h4>
-        <div style="background: var(--card-bg); padding: 15px; border-radius: 12px;">
-            <div class="form-group">
-                <label>Chọn Game Nạp</label>
-                <select id="game-method" class="form-control" onchange="renderGameFields()">
-                    <option value="FF">Kim Cương Free Fire</option>
-                    <option value="LQ">Quân Huy Liên Quân</option>
-                    <option value="ROBUX">Robux Roblox</option>
-                </select>
+    <!-- TAB LỊCH SỬ -->
+    <div id="tab-history" class="tab-content">
+        <h4 style="margin-bottom: 10px;">Lịch Sử Giao Dịch</h4>
+        <div id="history-list"></div>
+    </div>
+
+    <!-- TAB BXH -->
+    <div id="tab-top" class="tab-content">
+        <h4 style="margin-bottom: 10px;">Top Vượt Link Tuần</h4>
+        <div id="top-list"></div>
+    </div>
+
+    <!-- TAB ADMIN PANEL -->
+    <div id="tab-admin" class="tab-content">
+        <h4 style="margin-bottom: 10px;">Bảng Quản Trị Admin</h4>
+        <div id="admin-login-box">
+            <input type="password" id="admin-pass-input" class="form-control" placeholder="Nhập Mật Khẩu Admin...">
+            <button class="btn btn-primary" style="width: 100%;" onclick="loginAdmin()">Đăng Nhập Admin</button>
+        </div>
+        <div id="admin-dashboard" style="display: none;">
+            <h5 style="color: var(--accent); margin-top: 10px;">Danh Sách Đơn Rút Tiền</h5>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr><th>User</th><th>Loại</th><th>Chi Tiết</th><th>DCOIN</th><th>Hành Động</th></tr>
+                    </thead>
+                    <tbody id="admin-withdraw-table"></tbody>
+                </table>
             </div>
-            <div id="game-dynamic-fields"></div>
-            <div class="form-group">
-                <label>Số DCOIN quy đổi</label>
-                <input type="number" id="game-amount" class="form-control" placeholder="Nhập số DCOIN">
+
+            <h5 style="color: var(--accent); margin-top: 20px;">Quản Lý Người Dùng</h5>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Tên</th><th>DCOIN</th><th>Trạng Thái</th><th>Khóa</th></tr>
+                    </thead>
+                    <tbody id="admin-users-table"></tbody>
+                </table>
             </div>
-            <button class="btn btn-success" style="width: 100%; margin-top: 10px;" onclick="submitWithdraw('Nạp Game')">Xác Nhận Đổi Quà</button>
         </div>
     </div>
 
-    <!-- PAGE 6: LỊCH SỬ GIAO DỊCH -->
-    <div id="page-history" class="page">
-        <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử Giao Dịch</h4>
-        <div id="history-container"></div>
-    </div>
-
-    <!-- PAGE 7: ADMIN CONTROL PANEL -->
-    <div id="page-admin" class="page">
-        <h4 style="margin-bottom: 15px;"><i class="fa-solid fa-user-shield"></i> Quản Trị Viên (Admin)</h4>
-        
-        <!-- Các nút ô chữ nhật Admin -->
-        <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
-            <button class="btn" style="padding: 15px; text-align: left;" onclick="openAdminAuth('DUYET_DON')">
-                <i class="fa-solid fa-list-check"></i> <b>Duyệt Đơn Nạp / Rút Tiền</b>
-            </button>
-            <button class="btn" style="padding: 15px; text-align: left; background: #00b894;" onclick="openAdminAuth('TANG_DCOIN')">
-                <i class="fa-solid fa-gift"></i> <b>Tặng DCOIN Người Dùng (Vô Hạn ∞)</b>
-            </button>
-            <button class="btn btn-danger" style="padding: 15px; text-align: left;" onclick="openAdminAuth('KHOA_TK')">
-                <i class="fa-solid fa-lock"></i> <b>Khóa / Mở Khóa Tài Khoản</b>
-            </button>
-        </div>
-
-        <!-- Màn hình nội dung Admin sau khi nhập Pass -->
-        <div id="admin-content" style="display: none; margin-top: 20px; background: var(--card-bg); padding: 15px; border-radius: 12px;">
-            <!-- Render động bằng JS -->
-        </div>
-    </div>
-
-    <!-- FLOATING BUTTON TELEGRAM SUPPORT -->
-    <a id="support-btn" href="#" target="_blank" class="float-support"><i class="fa-brands fa-telegram"></i></a>
-
-    <!-- NAVBAR BOTTOM -->
-    <div class="navbar">
-        <div class="nav-item active" onclick="switchPage('home', this)"><i class="fa-solid fa-house"></i>Trang chủ</div>
-        <div class="nav-item" onclick="switchPage('tasks', this)"><i class="fa-solid fa-list-check"></i>Nhiệm vụ</div>
-        <div class="nav-item" onclick="switchPage('leaderboard', this)"><i class="fa-solid fa-ranking-star"></i>BXH</div>
-        <div class="nav-item" onclick="switchPage('withdraw', this)"><i class="fa-solid fa-wallet"></i>Rút tiền</div>
-        <div class="nav-item" onclick="switchPage('shop', this)"><i class="fa-solid fa-gamepad"></i>Nạp Game</div>
-        <div class="nav-item" onclick="switchPage('history', this)"><i class="fa-solid fa-history"></i>Lịch sử</div>
-        <div class="nav-item" onclick="switchPage('admin', this)"><i class="fa-solid fa-lock"></i>Admin</div>
-    </div>
-    
-    <!-- MODAL NHIỆM VỤ -->
+    <!-- MODAL LÀM NHIỆM VỤ 2 BƯỚC -->
     <div id="task-modal" class="modal">
         <div class="modal-content">
-            <h3 id="modal-task-title">Nhiệm Vụ</h3>
-            <p style="font-size: 12px; color: var(--subtext); margin: 10px 0;">Vui lòng copy link bên dưới, vượt qua xác thực để lấy mã:</p>
-            <input type="text" id="modal-task-link" class="form-control" readonly style="margin-bottom: 15px; text-align: center;">
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-danger" style="flex: 1;" onclick="closeModal()">Hủy</button>
-                <button class="btn btn-success" style="flex: 1;" id="modal-start-btn">Làm Ngay</button>
+            <h3 id="modal-task-title" style="margin-bottom: 10px;">Nhiệm Vụ</h3>
+            
+            <div id="modal-step-1">
+                <p style="font-size: 12px; color: var(--subtext); margin-bottom: 15px;">
+                    Nhấn <b>"Bắt Đầu"</b> để mở trang vượt link lấy Mã Xác Thực.
+                </p>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-danger" style="flex: 1;" onclick="closeModal('task-modal')">Hủy</button>
+                    <button class="btn btn-success" style="flex: 1;" id="modal-start-btn">Bắt Đầu</button>
+                </div>
+            </div>
+
+            <div id="modal-step-2" style="display: none;">
+                <p style="font-size: 12px; color: #ffeaa7; margin-bottom: 10px;">
+                    <i class="fa-solid fa-key"></i> Dán Mã Xác Thực thu được sau khi vượt link vào đây:
+                </p>
+                <input type="text" id="modal-verify-code" class="form-control" placeholder="Nhập mã xác thực..." style="text-align: center; font-weight: bold; font-size: 16px;">
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="btn btn-danger" style="flex: 1;" onclick="closeModal('task-modal')">Đóng</button>
+                    <button class="btn btn-success" style="flex: 1;" onclick="submitVerifyCode()">Xác Nhận & Nhận DCOIN</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL BẢO MẬT ADMIN (MẬT KHẨU) -->
-    <div id="admin-auth-modal" class="modal">
+    <!-- MODAL RÚT TIỀN -->
+    <div id="withdraw-modal" class="modal">
         <div class="modal-content">
-            <h3>Xác Thực Admin</h3>
-            <p style="font-size: 12px; color: var(--subtext); margin-bottom: 10px;">Nhập mật khẩu Admin để truy cập chức năng này:</p>
-            <input type="password" id="admin-pass-input" class="form-control" placeholder="Mật khẩu Admin" style="margin-bottom: 15px;">
-            <button class="btn btn-success" style="width: 100%;" onclick="verifyAdminPassword()">Xác Nhận</button>
+            <h3 id="wd-title" style="margin-bottom: 10px;">Rút Tiền</h3>
+            <input type="text" id="wd-details" class="form-control" placeholder="STK / Số Điện Thoại / Loại Thẻ...">
+            <input type="number" id="wd-amount" class="form-control" placeholder="Số DCOIN muốn rút...">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-danger" style="flex: 1;" onclick="closeModal('withdraw-modal')">Hủy</button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="submitWithdraw()">Gửi Yêu Cầu</button>
+            </div>
         </div>
     </div>
 
-    <!-- JAVASCRIPT LOGIC -->
     <script>
         const tg = window.Telegram ? window.Telegram.WebApp : null;
-        if(tg) tg.expand();
+        if (tg) tg.expand();
 
-        const API_BASE = ''; // Để trống nếu cùng Domain
-        let currentUser = tg?.initDataUnsafe?.user || { id: "12345678", first_name: "Test User", username: "testuser", photo_url: "https://i.imgur.com/6VBx3io.png" };
-        let adminToken = '';
-        let pendingAdminAction = '';
+        const API_BASE = window.location.origin; // Tự động lấy URL domain hiện tại
+        const userData = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : { id: '12345678', first_name: 'User_Test' };
 
-        // Headers gửi kèm Request chống Gian lận
         const headers = {
             'Content-Type': 'application/json',
-            'x-telegram-id': currentUser.id,
-            'x-telegram-name': currentUser.first_name,
-            'x-telegram-username': currentUser.username || '',
-            'x-telegram-avatar': currentUser.photo_url || ''
+            'x-telegram-id': userData.id.toString(),
+            'x-telegram-name': userData.first_name || 'User'
         };
 
-        // --- KHỞI TẠO APP ---
+        let currentActiveTaskId = null;
+        let adminToken = '';
+
         async function initApp() {
+            document.getElementById('u-avatar').innerText = (userData.first_name || 'U')[0].toUpperCase();
+            document.getElementById('u-name').innerText = userData.first_name || 'User';
+            document.getElementById('u-id').innerText = `ID: ${userData.id}`;
+
             try {
                 const res = await fetch(`${API_BASE}/api/user/info`, { headers });
                 const data = await res.json();
+                if (data.dcoin !== undefined) document.getElementById('u-dcoin').innerText = data.dcoin;
+            } catch (e) { console.error(e); }
 
-                if (data.isBanned) {
-                    document.getElementById('banned-screen').style.display = 'flex';
-                    document.getElementById('ban-reason-text').innerText = 'Lý do: ' + data.banReason;
-                    return;
-                }
-
-                // Render User Info
-                document.getElementById('user-avatar').src = data.user.avatar || 'https://i.imgur.com/6VBx3io.png';
-                document.getElementById('user-name').innerText = data.user.name;
-                document.getElementById('user-id').innerText = 'ID: ' + data.user.id;
-                document.getElementById('user-dcoin').innerText = data.user.dcoin;
-                document.getElementById('support-btn').href = data.adminSupportUrl;
-
-                // Hiển thị thông báo thưởng Admin (1 LẦN DUY NHẤT)
-                if (data.notification) {
-                    alert(`🎁 BẠN NHẬN ĐƯỢC QUÀ TỪ ADMIN!\nSố DCOIN: +${data.notification.amount}\nGhi chú: ${data.notification.note}`);
-                }
-
-                renderAIChart();
-                renderWithdrawFields();
-                renderGameFields();
-            } catch (err) {
-                console.error(err);
-            }
+            loadTasks();
         }
 
-        // --- SWITCH TABS ---
-        function switchPage(pageId, el) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(`page-${pageId}`).classList.add('active');
-            el.classList.add('active');
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.currentTarget.classList.add('active');
+            document.getElementById(`tab-${tab}`).classList.add('active');
 
-            if (pageId === 'tasks') loadTasks();
-            if (pageId === 'leaderboard') loadLeaderboard();
-            if (pageId === 'history') loadHistory();
+            if (tab === 'tasks') loadTasks();
+            if (tab === 'history') loadHistory();
+            if (tab === 'top') loadLeaderboard();
         }
 
-        // --- AI CHART ---
-        function renderAIChart() {
-            const ctx = document.getElementById('aiChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
-                    datasets: [{
-                        label: 'DCOIN kiếm được (AI Forecast)',
-                        data: [1200, 1900, 3000, 5000, 2000, 4000, 6500],
-                        borderColor: '#6c5ce7',
-                        tension: 0.4
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
-
-        // --- NHIỆM VỤ LINK RÚT GỌN ---
         async function loadTasks() {
             const res = await fetch(`${API_BASE}/api/tasks`, { headers });
             const tasks = await res.json();
-            const container = document.getElementById('tasks-container');
-            container.innerHTML = '';
-
+            
+            let html = '';
             tasks.forEach(t => {
-                const badgeClass = t.isLocked ? 'task-badge locked' : 'task-badge';
-                const badgeText = t.isLocked ? `Đã khóa (${t.completedToday}/${t.limit})` : `${t.completedToday}/${t.limit}`;
-
-                container.innerHTML += `
+                html += `
                     <div class="task-card">
-                        <span class="${badgeClass}">${badgeText}</span>
-                        <div style="display:flex; align-items:center; gap: 12px;">
-                            <img src="${t.image}" class="task-img">
+                        <div class="card-left">
+                            <img src="${t.image}" class="card-icon">
                             <div>
                                 <b>${t.name}</b>
-                                <div style="font-size: 12px; color: #ffeaa7;">+${t.reward} DCOIN</div>
+                                <div style="font-size: 11px; color: var(--accent);">+${t.reward} DCOIN (${t.currentCount}/${t.limit})</div>
                             </div>
                         </div>
-                        <button class="btn" ${t.isLocked ? 'disabled' : ''} onclick="openTaskModal('${t.id}', '${t.name}', '${t.link}')">
-                            ${t.isLocked ? 'Hoàn Thành' : 'Bắt Đầu'}
+                        <button class="btn ${t.isCompleted ? 'btn-danger' : 'btn-primary'}" 
+                            ${t.isCompleted ? 'disabled' : ''} 
+                            onclick="openTaskModal('${t.id}', '${t.name}', '${t.baseUrl}')">
+                            ${t.isCompleted ? 'Đã Xong' : 'Làm'}
                         </button>
                     </div>
                 `;
             });
+            document.getElementById('tasks-list').innerHTML = html;
         }
 
-        let currentActiveTaskId = null;
         function openTaskModal(id, name, link) {
             currentActiveTaskId = id;
             document.getElementById('modal-task-title').innerText = name;
-            document.getElementById('modal-task-link').value = link;
-            document.getElementById('modal-start-btn').onclick = () => completeTask(id, link);
+            document.getElementById('modal-step-1').style.display = 'block';
+            document.getElementById('modal-step-2').style.display = 'none';
+            document.getElementById('modal-verify-code').value = '';
+
+            document.getElementById('modal-start-btn').onclick = () => {
+                window.open(link, '_blank');
+                document.getElementById('modal-step-1').style.display = 'none';
+                document.getElementById('modal-step-2').style.display = 'block';
+            };
+
             document.getElementById('task-modal').style.display = 'flex';
         }
 
-        function closeModal() {
-            document.getElementById('task-modal').style.display = 'none';
-        }
+        async function submitVerifyCode() {
+            const code = document.getElementById('modal-verify-code').value;
+            if (!code) return alert('Vui lòng nhập mã xác thực!');
 
-        async function completeTask(taskId, link) {
-            window.open(link, '_blank'); // Mở link rút gọn cho user
-            closeModal();
-
-            // Gửi xác thực hoàn thành về Server
-            const res = await fetch(`${API_BASE}/api/tasks/complete`, {
+            const res = await fetch(`${API_BASE}/api/tasks/verify-code`, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({ taskId })
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                alert(`Thành công! Bạn nhận được DCOIN.`);
-                initApp();
-                loadTasks();
-            } else {
-                alert(data.error);
-            }
-        }
-
-        // --- BẢNG XẾP HẠNG ---
-        async function loadLeaderboard() {
-            const res = await fetch(`${API_BASE}/api/leaderboard`, { headers });
-            const list = await res.json();
-            const tbody = document.getElementById('leaderboard-body');
-            tbody.innerHTML = '';
-
-            list.forEach((item, index) => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td><b>#${index + 1}</b></td>
-                        <td style="display:flex; align-items:center; gap:8px;">
-                            <img src="${item.avatar || 'https://i.imgur.com/6VBx3io.png'}" style="width:25px; height:25px; border-radius:50%;">
-                            ${item.name}
-                        </td>
-                        <td><span style="color:var(--accent); font-weight:bold;">${item.count}</span> link</td>
-                    </tr>
-                `;
-            });
-        }
-
-        // --- FORM RÚT TIỀN & NẠP GAME ---
-        function renderWithdrawFields() {
-            const method = document.getElementById('wd-method').value;
-            const container = document.getElementById('wd-dynamic-fields');
-            if (method === 'BANK') {
-                container.innerHTML = `
-                    <div class="form-group"><label>Tên Ngân Hàng</label><input type="text" id="wd-bank-name" class="form-control" placeholder="VD: Vietcombank"></div>
-                    <div class="form-group"><label>Số Tài Khoản</label><input type="text" id="wd-acc-num" class="form-control" placeholder="Số tài khoản"></div>
-                    <div class="form-group"><label>Tên Chủ Tài Khoản (Viết hoa)</label><input type="text" id="wd-acc-name" class="form-control" placeholder="NGUYEN VAN A"></div>
-                `;
-            } else if (method === 'THECAO') {
-                container.innerHTML = `
-                    <div class="form-group"><label>Loại Thẻ</label><select id="wd-card-type" class="form-control"><option>Viettel</option><option>MobiFone</option><option>Vinaphone</option></select></div>
-                `;
-            } else {
-                container.innerHTML = `
-                    <div class="form-group"><label>Số Điện Thoại Nhận Tiền</label><input type="text" id="wd-phone" class="form-control" placeholder="Số điện thoại ví"></div>
-                `;
-            }
-        }
-
-        function renderGameFields() {
-            const game = document.getElementById('game-method').value;
-            const container = document.getElementById('game-dynamic-fields');
-            if (game === 'FF' || game === 'LQ') {
-                container.innerHTML = `<div class="form-group"><label>ID Nhân Vật (Game ID)</label><input type="text" id="game-id" class="form-control" placeholder="Nhập chuẩn ID trong game"></div>`;
-            } else {
-                container.innerHTML = `<div class="form-group"><label>Username Roblox</label><input type="text" id="game-id" class="form-control" placeholder="Tên tài khoản Roblox"></div>`;
-            }
-        }
-
-        async function submitWithdraw(category) {
-            let method = '', details = '', amount = 0;
-
-            if (category === 'Rút Tiền') {
-                method = document.getElementById('wd-method').value;
-                amount = parseInt(document.getElementById('wd-amount').value);
-                if (method === 'BANK') {
-                    details = `NH: ${document.getElementById('wd-bank-name').value} | STK: ${document.getElementById('wd-acc-num').value} | CTK: ${document.getElementById('wd-acc-name').value}`;
-                } else if (method === 'THECAO') {
-                    details = `Loại thẻ: ${document.getElementById('wd-card-type').value}`;
-                } else {
-                    details = `SĐT: ${document.getElementById('wd-phone').value}`;
-                }
-            } else {
-                method = 'NẠP ' + document.getElementById('game-method').value;
-                amount = parseInt(document.getElementById('game-amount').value);
-                details = `Game ID/User: ${document.getElementById('game-id').value}`;
-            }
-
-            const res = await fetch(`${API_BASE}/api/withdraw`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ category, method, details, amountDcoin: amount })
+                body: JSON.stringify({ taskId: currentActiveTaskId, userCode: code })
             });
 
             const data = await res.json();
             if (data.success) {
                 alert(data.message);
+                closeModal('task-modal');
                 initApp();
             } else {
                 alert(data.error);
             }
         }
 
-        // --- LỊCH SỬ ---
-        async function loadHistory() {
-            const res = await fetch(`${API_BASE}/api/history`, { headers });
-            const list = await res.json();
-            const container = document.getElementById('history-container');
-            container.innerHTML = '';
-
-            list.forEach(h => {
-                container.innerHTML += `
-                    <div style="background:var(--card-bg); padding:12px; border-radius:10px; margin-bottom:10px;">
-                        <div style="display:flex; justify-content:space-between; font-size:13px;">
-                            <b>${h.category || h.type} - ${h.method || ''}</b>
-                            <span class="status-${h.status}">${h.status}</span>
-                        </div>
-                        <div style="font-size:11px; color:var(--subtext); margin-top:5px;">Chi tiết: ${h.details}</div>
-                        <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:12px;">
-                            <span>${h.createdAt}</span>
-                            <b style="color:#ffeaa7;">${h.amountDcoin ? '-' + h.amountDcoin + ' DCOIN' : h.amount}</b>
-                        </div>
-                    </div>
-                `;
-            });
+        let selectedWithdrawCategory = '';
+        function openWithdrawModal(cat) {
+            selectedWithdrawCategory = cat;
+            document.getElementById('wd-title').innerText = `Rút Tiền (${cat})`;
+            document.getElementById('withdraw-modal').style.display = 'flex';
         }
 
-        // --- ADMIN PANEL BẢO MẬT 2 LỚP ---
-        function openAdminAuth(action) {
-            pendingAdminAction = action;
-            if (adminToken) {
-                executeAdminAction();
-            } else {
-                document.getElementById('admin-auth-modal').style.display = 'flex';
-            }
-        }
+        async function submitWithdraw() {
+            const details = document.getElementById('wd-details').value;
+            const amount = document.getElementById('wd-amount').value;
 
-        async function verifyAdminPassword() {
-            const pass = document.getElementById('admin-pass-input').value;
-            const res = await fetch(`${API_BASE}/api/admin/auth`, {
+            if (!details || !amount) return alert('Vui lòng điền đầy đủ thông tin!');
+
+            const res = await fetch(`${API_BASE}/api/withdraw`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: pass })
+                headers,
+                body: JSON.stringify({ category: selectedWithdrawCategory, method: 'Tự động', details, amountDcoin: amount })
             });
-            const data = await res.json();
 
+            const data = await res.json();
             if (data.success) {
-                adminToken = data.token;
-                document.getElementById('admin-auth-modal').style.display = 'none';
-                executeAdminAction();
+                alert(data.message);
+                closeModal('withdraw-modal');
+                initApp();
             } else {
                 alert(data.error);
             }
         }
 
-        function executeAdminAction() {
-            const container = document.getElementById('admin-content');
-            container.style.display = 'block';
-
-            if (pendingAdminAction === 'DUYET_DON') renderAdminOrders();
-            if (pendingAdminAction === 'TANG_DCOIN') renderAdminGift();
-            if (pendingAdminAction === 'KHOA_TK') renderAdminBan();
-        }
-
-        async function renderAdminOrders() {
-            const res = await fetch(`${API_BASE}/api/admin/orders`, { headers: { 'x-admin-token': adminToken } });
-            const orders = await res.json();
-            const container = document.getElementById('admin-content');
-            
-            let html = `<h5>Duyệt Đơn Rút Tiền / Nạp Game</h5>`;
-            orders.forEach(o => {
+        async function loadHistory() {
+            const res = await fetch(`${API_BASE}/api/history`, { headers });
+            const list = await res.json();
+            let html = '';
+            list.forEach(i => {
+                let badge = i.status === 'HOAN_THANH' ? '<span style="color:var(--success)">Thành công</span>' : (i.status === 'TU_CHOI' ? '<span style="color:var(--danger)">Từ chối</span>' : '<span style="color:#f59e0b">Chờ duyệt</span>');
                 html += `
-                    <div style="background:#121221; padding:10px; border-radius:8px; margin-top:10px; font-size:12px;">
-                        <div><b>User:</b> ${o.userName} (ID: ${o.userId}) | Telegram: @${o.telegramUsername}</div>
-                        <div><b>Loại:</b> ${o.category} - ${o.method} | <b>DCOIN:</b> ${o.amountDcoin}</div>
-                        <div><b>Chi tiết:</b> ${o.details}</div>
-                        <div style="margin-top:8px; display:flex; gap:5px; flex-wrap:wrap;">
-                            <button class="btn btn-success" style="padding:4px 8px; font-size:10px;" onclick="processOrder('${o.id}', 'COMPLETE')">Hoàn Thành</button>
-                            <button class="btn" style="padding:4px 8px; font-size:10px; background:#3498db;" onclick="processOrder('${o.id}', 'APPROVE')">Đã Duyệt</button>
-                            <button class="btn" style="padding:4px 8px; font-size:10px; background:#e67e22;" onclick="processOrder('${o.id}', 'REFUND')">Hoàn DCOIN</button>
-                            <button class="btn btn-danger" style="padding:4px 8px; font-size:10px;" onclick="processOrder('${o.id}', 'PENALTY')">Thu DCOIN (Gian lận)</button>
+                    <div class="item-card">
+                        <div>
+                            <b>${i.category} - ${i.method}</b>
+                            <div style="font-size: 11px; color: var(--subtext);">${i.details}</div>
+                            <div style="font-size: 10px; color: var(--subtext);">${i.createdAt}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: bold;">${i.amountDcoin} DCOIN</div>
+                            <div style="font-size: 11px;">${badge}</div>
                         </div>
                     </div>
                 `;
             });
-            container.innerHTML = html;
+            document.getElementById('history-list').innerHTML = html || '<p style="color:var(--subtext)">Chưa có giao dịch nào.</p>';
         }
 
-        async function processOrder(orderId, action) {
-            await fetch(`${API_BASE}/api/admin/process-order`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
-                body: JSON.stringify({ orderId, action })
+        async function loadLeaderboard() {
+            const res = await fetch(`${API_BASE}/api/leaderboard`);
+            const list = await res.json();
+            let html = '';
+            list.forEach((u, index) => {
+                html += `
+                    <div class="item-card">
+                        <div class="card-left">
+                            <b style="color:var(--accent)">#${index + 1}</b>
+                            <div><b>${u.name}</b></div>
+                        </div>
+                        <div style="font-weight: bold; color: var(--success);">${u.count} Lượt vượt</div>
+                    </div>
+                `;
             });
-            alert('Đã xử lý đơn!');
-            renderAdminOrders();
+            document.getElementById('top-list').innerHTML = html || '<p style="color:var(--subtext)">Chưa có dữ liệu tuần này.</p>';
         }
 
-        function renderAdminGift() {
-            const container = document.getElementById('admin-content');
-            container.innerHTML = `
-                <h5>Tặng DCOIN (Số lượng Admin: ∞)</h5>
-                <div class="form-group" style="margin-top:10px;"><label>Telegram ID Người Nhận</label><input type="text" id="gift-uid" class="form-control"></div>
-                <div class="form-group"><label>Số DCOIN Tặng</label><input type="number" id="gift-amount" class="form-control"></div>
-                <div class="form-group"><label>Ghi Chú Thông Báo</label><input type="text" id="gift-note" class="form-control" placeholder="VD: Thưởng sự kiện"></div>
-                <button class="btn btn-success" style="width:100%;" onclick="submitGift()">Tặng DCOIN Ngay</button>
-            `;
-        }
-
-        async function submitGift() {
-            const res = await fetch(`${API_BASE}/api/admin/gift-dcoin`, {
+        // --- ADMIN PANEL FUNCTIONS ---
+        async function loginAdmin() {
+            const pass = document.getElementById('admin-pass-input').value;
+            const res = await fetch(`${API_BASE}/api/admin/data`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
-                body: JSON.stringify({
-                    targetUserId: document.getElementById('gift-uid').value,
-                    amount: document.getElementById('gift-amount').value,
-                    note: document.getElementById('gift-note').value
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pass })
             });
+
             const data = await res.json();
-            alert(data.message || data.error);
+            if (res.ok) {
+                adminToken = pass;
+                document.getElementById('admin-login-box').style.display = 'none';
+                document.getElementById('admin-dashboard').style.display = 'block';
+                renderAdminData(data);
+            } else {
+                alert(data.error);
+            }
         }
 
-        function renderAdminBan() {
-            const container = document.getElementById('admin-content');
-            container.innerHTML = `
-                <h5>Khóa / Mở Khóa Tài Khoản</h5>
-                <div class="form-group" style="margin-top:10px;"><label>Telegram ID</label><input type="text" id="ban-uid" class="form-control"></div>
-                <div class="form-group"><label>Lý Do / Ghi Chú</label><input type="text" id="ban-note" class="form-control"></div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn btn-danger" style="flex:1;" onclick="submitBan(true)">Khóa Tài Khoản</button>
-                    <button class="btn btn-success" style="flex:1;" onclick="submitBan(false)">Mở Khóa</button>
-                </div>
-            `;
-        }
-
-        async function submitBan(isBanned) {
-            const res = await fetch(`${API_BASE}/api/admin/toggle-ban`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
-                body: JSON.stringify({
-                    targetUserId: document.getElementById('ban-uid').value,
-                    isBanned: isBanned,
-                    note: document.getElementById('ban-note').value
-                })
+        function renderAdminData(data) {
+            // Withdrawals Table
+            let wHtml = '';
+            data.withdrawals.forEach(w => {
+                let btns = w.status === 'CHO_DUYET' ? `
+                    <button class="btn btn-success" onclick="adminAction('${w.id}', 'APPROVE')">Duyệt</button>
+                    <button class="btn btn-danger" onclick="adminAction('${w.id}', 'REJECT')">Hủy</button>
+                ` : w.status;
+                wHtml += `<tr><td>${w.userName}</td><td>${w.category}</td><td>${w.details}</td><td>${w.amountDcoin}</td><td>${btns}</td></tr>`;
             });
-            const data = await res.json();
-            alert(data.message || data.error);
+            document.getElementById('admin-withdraw-table').innerHTML = wHtml;
+
+            // Users Table
+            let uHtml = '';
+            data.users.forEach(u => {
+                uHtml += `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td>${u.name}</td>
+                        <td>${u.dcoin}</td>
+                        <td>${u.isBanned ? '<span style="color:red">Bị Khóa</span>' : 'Hoạt động'}</td>
+                        <td><button class="btn btn-danger" onclick="toggleBan('${u.id}')">${u.isBanned ? 'Mở' : 'Khóa'}</button></td>
+                    </tr>
+                `;
+            });
+            document.getElementById('admin-users-table').innerHTML = uHtml;
+        }
+        
+        async function adminAction(id, action) {
+            await fetch(`${API_BASE}/api/admin/action-withdraw`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: adminToken, id, action })
+            });
+            loginAdmin();
         }
 
-        // Chạy khởi tạo Mini App
+        async function toggleBan(targetUserId) {
+            await fetch(`${API_BASE}/api/admin/toggle-ban`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: adminToken, targetUserId })
+            });
+            loginAdmin();
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
         initApp();
     </script>
 </body>
 </html>
+
+

@@ -99,7 +99,7 @@ app.post('/api/webhook', async (req, res) => {
                         inline_keyboard: [[
                             { 
                                 text: "🚀 Mở Mini App", 
-                                web_app: { url: "https://ducanhb.github.io/vuotlinkkiemtien/" } 
+                                web_app: { url: "https://ducanhbuiok-svg.github.io/vuotlinkkiemtien/" } 
                             }
                         ]]
                     }

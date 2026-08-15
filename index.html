@@ -139,14 +139,20 @@
         function contactAdmin() { window.open(`https://t.me/${ADMIN_USER}`, '_blank'); }
 
         async function fetchUserInfo() {
-            const res = await fetch(`${API}/api/user/info`, { headers });
-            const data = await res.json();
-            if (data.dcoin !== undefined) document.getElementById('u-dcoin').innerText = data.dcoin;
-            if (data.isAdmin) {
-                document.getElementById('admin-tab-btn').style.display = 'block';
-            }
+    try {
+        const res = await fetch(`${API}/api/user/info`, { headers });
+        const data = await res.json();
+        if (data.dcoin !== undefined) {
+            document.getElementById('u-dcoin').innerText = data.dcoin;
         }
-
+        // Hiện nút Admin nếu là bạn
+        if (String(data.id) === "8914123780") {
+            document.getElementById('admin-tab-btn').style.display = 'inline-block';
+        }
+    } catch (e) { console.error("Lỗi:", e); }
+                }
+        
+        
         function switchTab(t, btn) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -159,16 +165,24 @@
         }
 
         async function loadTasks() {
-            const res = await fetch(`${API}/api/tasks`, { headers });
-            const tasks = await res.json();
-            let html = '';
-            tasks.forEach(t => {
-                html += `<div class="task-card">
-                    <div><b>${t.name}</b><div style="font-size:11px; color:var(--accent);">+${t.reward} DCOIN (${t.currentCount}/${t.limit})</div></div>
-                    <button class="btn ${t.isCompleted ? 'btn-danger' : 'btn-primary'}" ${t.isCompleted ? 'disabled' : ''} onclick="startAutoTask('${t.id}')">${t.isCompleted ? 'Xong' : 'Làm Task'}</button>
-                </div>`;
-            });
-            document.getElementById('tasks-list').innerHTML = html;
+    try {
+        const res = await fetch(`${API}/api/tasks`, { headers });
+        const tasks = await res.json();
+        const container = document.getElementById('tasks-container');
+        if (!container) return;
+        
+        if (Array.isArray(tasks) && tasks.length > 0) {
+            container.innerHTML = tasks.map(t => `
+                <div class="task-card" style="padding:15px; border-bottom:1px solid #333;">
+                    <h4>${t.title}</h4>
+                    <p>Phần thưởng: +${t.reward} DCOIN</p>
+                    <button onclick="doTask('${t.id}')">Làm nhiệm vụ (${t.currentCount}/${t.limit})</button>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = `<p style="text-align:center; padding:20px;">Chưa có nhiệm vụ!</p>`;
+        }
+    } catch (e) { console.error("Lỗi load task:", e); }
         }
 
         // HÀM MỞ LINK VƯỢT TỰ ĐỘNG

@@ -6,44 +6,96 @@
     <title>Vượt Link Kiếm Tiền</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; background: #0f172a; color: #fff; margin: 0; padding: 15px; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #fff; margin: 0; padding: 15px; }
         .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid #334155; }
         .user-info { display: flex; align-items: center; gap: 10px; }
-        .avatar { width: 40px; height: 40px; background: #38bdf8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0f172a; }
-        .coin-box { background: #0284c7; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px; }
-        .nav { display: flex; gap: 10px; margin: 15px 0; border-bottom: 1px solid #334155; padding-bottom: 10px; overflow-x: auto; }
-        .nav button { background: transparent; border: none; color: #94a3b8; font-weight: bold; padding: 8px 12px; cursor: pointer; }
-        .nav button.active { color: #38bdf8; border-bottom: 2px solid #38bdf8; }
-        .admin-btn { background: #eab308 !important; color: #000 !important; border-radius: 6px; display: none; }
-        .task-card { background: #1e293b; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #334155; }
-        .task-card h4 { margin: 0 0 5px 0; color: #f8fafc; }
-        .task-card p { margin: 0 0 10px 0; color: #38bdf8; font-size: 14px; }
-        .btn-do { background: #22c55e; color: #fff; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer; }
+        .avatar { width: 42px; height: 42px; background: #38bdf8; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #0f172a; font-size: 18px; }
+        .coin-box { background: #0284c7; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+        
+        /* Navigation Tabs */
+        .nav { display: flex; gap: 8px; margin: 15px 0; border-bottom: 1px solid #334155; padding-bottom: 10px; overflow-x: auto; }
+        .nav button { background: transparent; border: none; color: #94a3b8; font-weight: 600; padding: 8px 12px; cursor: pointer; white-space: nowrap; border-radius: 6px; }
+        .nav button.active { color: #38bdf8; background: #1e293b; }
+        .admin-btn { background: #eab308 !important; color: #000 !important; font-weight: bold !important; display: none; }
+
+        /* Content Sections */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Task Cards */
+        .task-card { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #334155; }
+        .task-card h4 { margin: 0 0 6px 0; color: #f8fafc; font-size: 16px; }
+        .task-card p { margin: 0 0 12px 0; color: #38bdf8; font-weight: bold; font-size: 14px; }
+        .btn-do { background: #22c55e; color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; font-size: 14px; }
+        .btn-do:active { opacity: 0.8; }
+        
+        .box-info { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; text-align: center; }
     </style>
 </head>
 <body>
 
+    <!-- Header -->
     <div class="header">
         <div class="user-info">
             <div class="avatar" id="u-avatar">D</div>
             <div>
-                <strong id="u-name">Đang tải...</strong><br>
+                <strong id="u-name" style="font-size: 15px;">Đang tải...</strong><br>
                 <small style="color: #94a3b8;">ID: <span id="u-id">...</span></small>
             </div>
         </div>
         <div class="coin-box">🪙 <span id="u-dcoin">0</span> DCOIN</div>
     </div>
 
+    <!-- Thanh Điều Hướng (Tabs) -->
     <div class="nav">
-        <button class="active">Nhiệm Vụ</button>
-        <button>Rút Tiền</button>
-        <button>Lịch Sử</button>
-        <button>BXH</button>
-        <button id="admin-tab-btn" class="admin-btn">👑 ADMIN</button>
+        <button class="tab-link active" onclick="openTab('tab-tasks', this)">Nhiệm Vụ</button>
+        <button class="tab-link" onclick="openTab('tab-withdraw', this)">Rút Tiền</button>
+        <button class="tab-link" onclick="openTab('tab-history', this)">Lịch Sử</button>
+        <button class="tab-link" onclick="openTab('tab-leaderboard', this)">BXH</button>
+        <button id="admin-tab-btn" class="tab-link admin-btn" onclick="openTab('tab-admin', this)">👑 ADMIN</button>
     </div>
 
-    <div id="tasks-container">
-        <p style="text-align: center; color: #94a3b8; padding: 20px;">Đang kết nối dữ liệu...</p>
+    <!-- Nội dung Tab Nhiệm Vụ -->
+    <div id="tab-tasks" class="tab-content active">
+        <div id="tasks-container">
+            <p style="text-align: center; color: #94a3b8; padding: 20px;">Đang tải nhiệm vụ...</p>
+        </div>
+    </div>
+
+    <!-- Nội dung Tab Rút Tiền -->
+    <div id="tab-withdraw" class="tab-content">
+        <div class="box-info">
+            <h3>💳 Rút Tiền Về Ví</h3>
+            <p style="color: #94a3b8; font-size: 14px;">Tối thiểu 50,000 DCOIN để tạo lệnh rút.</p>
+            <button class="btn-do" style="background: #0284c7; margin-top: 10px;" onclick="alert('Tính năng đang hoàn thiện!')">Tạo Lệnh Rút</button>
+        </div>
+    </div>
+
+    <!-- Nội dung Tab Lịch Sử -->
+    <div id="tab-history" class="tab-content">
+        <div class="box-info">
+            <h3>📜 Lịch Sử Giao Dịch</h3>
+            <p style="color: #94a3b8; font-size: 14px;">Chưa có lịch sử rút tiền nào.</p>
+        </div>
+    </div>
+
+    <!-- Nội dung Tab BXH -->
+    <div id="tab-leaderboard" class="tab-content">
+        <div class="box-info">
+            <h3>🏆 Bảng Xếp Hạng</h3>
+            <p style="color: #94a3b8; font-size: 14px;">Top người chơi kiếm nhiều DCOIN nhất.</p>
+        </div>
+    </div>
+
+    <!-- Nội dung Tab Admin -->
+    <div id="tab-admin" class="tab-content">
+        <div class="box-info" style="border-color: #eab308;">
+            <h3 style="color: #eab308; margin-top: 0;">👑 Bảng Quản Trị Admin</h3>
+            <p style="font-size: 13px; color: #94a3b8;">Chỉ Admin mới nhìn thấy giao diện này.</p>
+            <button class="btn-do" style="background: #eab308; color: #000; margin-bottom: 8px;" onclick="alert('Tính năng duyệt đơn')">Duyệt Đơn Rút Tiền</button>
+            <button class="btn-do" style="background: #3b82f6;" onclick="alert('Tính năng cộng coin')">Cộng/Trừ DCOIN</button>
+        </div>
     </div>
 
     <script>
@@ -53,52 +105,77 @@
 
         const user = tg?.initDataUnsafe?.user || { id: "8914123780", first_name: "DA ⚔ PRO" };
 
-        // Hiển thị thông tin cơ bản ngay lập tức
+        // Hiển thị Profile
         document.getElementById('u-name').innerText = user.first_name || 'User';
         document.getElementById('u-id').innerText = user.id;
         document.getElementById('u-avatar').innerText = (user.first_name || 'U').charAt(0).toUpperCase();
 
-        // Mở Tab Admin nếu là ID của bạn
+        // Mở nút Admin cho ID chuẩn
         if (String(user.id) === "8914123780") {
             document.getElementById('admin-tab-btn').style.display = 'inline-block';
         }
 
-        const headers = {
-            'Content-Type': 'application/json',
+        // Chuyển Tab
+        function openTab(tabId, btnElement) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-link').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        // Làm Nhiệm Vụ
+        function doTask(link) {
+            if (!link || link === "undefined") {
+                alert("Nhiệm vụ này chưa cấu hình link!");
+                return;
+            }
+            window.open(link, '_blank');
+        }
+
+        const headers = { 
+            'Content-Type': 'application/json', 
             'x-telegram-id': String(user.id),
             'x-telegram-name': encodeURIComponent(user.first_name || '')
         };
 
+        // Tải dữ liệu từ Backend
         async function initApp() {
             try {
-                // 1. Lấy Coin
+                // 1. Lấy DCOIN
                 const resUser = await fetch(`${API}/api/user/info`, { headers });
                 const dataUser = await resUser.json();
-                if (dataUser.dcoin !== undefined) {
-                    document.getElementById('u-dcoin').innerText = dataUser.dcoin;
-                }
+                document.getElementById('u-dcoin').innerText = dataUser.dcoin || 0;
 
-                // 2. Lấy Danh sách Nhiệm vụ
+                // 2. Lấy Danh Sách Nhiệm Vụ
                 const resTasks = await fetch(`${API}/api/tasks`, { headers });
                 const tasks = await resTasks.json();
                 const container = document.getElementById('tasks-container');
 
                 if (Array.isArray(tasks) && tasks.length > 0) {
-                    container.innerHTML = tasks.map(t => `
-                        <div class="task-card">
-                            <h4>${t.title}</h4>
-                            <p>+${t.reward} DCOIN</p>
-                            <button class="btn-do" onclick="window.open('${t.link}', '_blank')">
-                                Làm nhiệm vụ (${t.currentCount}/${t.limit})
-                            </button>
-                        </div>
-                    `).join('');
+                    container.innerHTML = tasks.map((t, idx) => {
+                        const title = t.title || t.name || `Nhiệm vụ vượt link #${idx + 1}`;
+                        const reward = t.reward || 0;
+                        const link = t.link || "";
+                        const count = t.currentCount || 0;
+                        const limit = t.limit || 0;
+
+                        return `
+                            <div class="task-card">
+                                <h4>${title}</h4>
+                                <p>+${reward} DCOIN</p>
+                                <button class="btn-do" onclick="doTask('${link}')">
+                                    Làm nhiệm vụ (${count}/${limit})
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
                 } else {
-                    container.innerHTML = `<p style="text-align: center; padding: 20px;">Hiện chưa có nhiệm vụ nào!</p>`;
+                    container.innerHTML = `<p style="text-align: center; color: #94a3b8; padding: 20px;">Hiện chưa có nhiệm vụ nào!</p>`;
                 }
             } catch (err) {
                 console.error(err);
-                document.getElementById('tasks-container').innerHTML = `<p style="text-align: center; color: #ef4444; padding: 20px;">Lỗi kết nối API Server!</p>`;
+                document.getElementById('tasks-container').innerHTML = `<p style="text-align: center; color: #ef4444; padding: 20px;">Lỗi tải dữ liệu nhiệm vụ!</p>`;
             }
         }
 
@@ -106,3 +183,4 @@
     </script>
 </body>
 </html>
+                

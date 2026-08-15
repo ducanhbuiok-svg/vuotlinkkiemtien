@@ -71,21 +71,6 @@ function checkAdmin(req, res, next) {
     next();
 }
 
-// Webhook nhận lệnh /start
-app.post('/api/webhook', (req, res) => {
-    const update = req.body;
-    if (update && update.message && update.message.text === '/start') {
-        const chatId = update.message.chat.id;
-        bot.sendMessage(chatId, "👋 Chào mừng bạn đến với Mini App!\nBấm nút bên dưới để bắt đầu:", {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: "🚀 Mở Mini App", web_app: { url: "https://ducanhbuiok-svg.github.io/vuotlinkkiemtien" } }]
-                ]
-            }
-        });
-    }
-    res.status(200).send('OK');
-});
 
 // --- API USER ---
 app.get('/api/user/info', checkUserSecurity, (req, res) => {
@@ -95,6 +80,38 @@ app.get('/api/user/info', checkUserSecurity, (req, res) => {
         dcoin: req.user.dcoin, 
         isAdmin: (req.user.id.toString() === ADMIN_ID.toString()) 
     });
+});
+// Webhook nhận lệnh /start
+app.post('/api/webhook', async (req, res) => {
+    try {
+        const update = req.body;
+        if (update && update.message && update.message.text === '/start') {
+            const chatId = update.message.chat.id;
+            
+            // Gửi tin nhắn trực tiếp bằng API của Telegram
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: "👋 Chào mừng bạn đến với Mini App!\nBấm nút bên dưới để mở ứng dụng:",
+                    reply_markup: {
+                        inline_keyboard: [[
+                            { 
+                                text: "🚀 Mở Mini App", 
+                                web_app: { url: "https://ducanhb.github.io/vuotlinkkiemtien" } 
+                            }
+                        ]]
+                    }
+                })
+            });
+        }
+    } catch (error) {
+        console.error("Lỗi Webhook:", error);
+    }
+    
+    // Luôn trả về 200 OK để Telegram biết server đã nhận
+    res.status(200).send('OK');
 });
 
 app.get('/api/tasks', checkUserSecurity, (req, res) => {
